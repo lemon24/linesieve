@@ -1,9 +1,10 @@
-..
-two
-  ('two', '')
-  ('two', '')
-  ('two', '2')
-  ('two', 'roman-ii')
-  ('two', '')
 .
-(True, 'good end') two
+two
+2
+ROMAN-ii
+
+aaa
+aaa
+
+.
+good end

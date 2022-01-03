@@ -1,3 +1,4 @@
+--section '(\S+):$' --failure 'bad end' --success 'good end' show two sub roman ROMAN 
 
 before
 
@@ -12,6 +13,11 @@ two:
 
 2
 roman-ii
+
+
+aaa
+aaa
+
 
 three:
 
