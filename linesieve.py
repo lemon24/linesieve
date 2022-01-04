@@ -16,6 +16,7 @@ def tokenize(it, section_pattern, success_pattern, failure_pattern):
     done = False
     ok = None
     section = ''
+    yielded_lines = False
     for line in chain(it, [None]):
         if line is not None:
             line = line.rstrip()
@@ -43,13 +44,19 @@ def tokenize(it, section_pattern, success_pattern, failure_pattern):
                 label = match.group(1)
 
         if done:
+            if not yielded_lines:
+                yield section, None
             yield ok, label
             break
 
         if label:
+            if not yielded_lines:
+                yield section, None
             section = label
+            yielded_lines = False
             continue
-        
+
+        yielded_lines = True
         yield section, line
 
 
@@ -76,7 +83,15 @@ def group_by_section(it, show):
     get_one = itemgetter(1)
 
     for section, lines in groups():
-        yield section, map(get_one, lines)
+        lines =  map(get_one, lines)
+
+        first = next(lines, None)
+
+        if first is None:
+            yield section, ()
+            continue
+
+        yield section, chain([first], lines)
 
 
 def dedupe_blanks(groups):
@@ -111,14 +126,14 @@ def apply_filters(groups, filters):
                     break
             if line is not None:
                 yield line
-    
+
     for section, lines in groups:
         if section not in {True, False, None}:
             lines = filter_lines(lines)
         yield section, lines
 
 
-def do_output(groups, section_dot='.', no_section='<no-section>'):
+def output_lines(groups, section_dot='.'):
     prev_section = None
     last_was_dot = False
 
@@ -128,21 +143,15 @@ def do_output(groups, section_dot='.', no_section='<no-section>'):
             echo(style(section_dot, dim=True), err=True, nl=False)
             last_was_dot = True
 
-        if last_was_dot:
+        elif last_was_dot:
             echo(err=True)
             last_was_dot = False
 
-        if section in {True, False, None}:
-            if section is True:
-                echo(style(next(lines), fg='green'), err=True)
-            elif section is False:
-                echo(style(next(lines), fg='red'), err=True)
-            else:
-                echo(style(
-                    f"unexpected end during {style(prev_section or no_section, bold=True)}", 
-                    fg='red'
-                ), err=True)
-            return section
+        if section is True or section is False:
+            return section, next(lines)
+
+        if section is None:
+            return section, prev_section
 
         if section:
             echo(style(section, dim=True), err=True)
@@ -153,23 +162,16 @@ def do_output(groups, section_dot='.', no_section='<no-section>'):
         prev_section = section
 
 
-def pattern_option(*param_decls):
-    return click.option(
-        *param_decls, 
-        default='$nothing',
-        show_default=True, 
-        metavar='PATTERN',
-    )
-
+MATCH_NOTHING = '$nothing'
 
 @click.group(chain=True, invoke_without_command=True)
-@pattern_option('--section')
-@pattern_option('--success')
-@pattern_option('--failure')
+@click.option('-s', '--section', metavar='PATTERN')
+@click.option('-k', '--success', metavar='PATTERN')
+@click.option('-f', '--failure', metavar='PATTERN')
 @click.pass_context
 def cli(ctx, **kwargs):
     ctx.obj = {}
-    
+
 @cli.result_callback()
 @click.pass_context
 def process_pipeline(ctx, processors, section, success, failure):
@@ -178,21 +180,38 @@ def process_pipeline(ctx, processors, section, success, failure):
         file = click.get_text_stream('stdin')
 
     process = ctx.obj.get('process')
-    
+
     show = ctx.obj.get('show')
 
-    tokens = tokenize(file, section, success, failure)
-    
-    if show is None:
-        show_pred = lambda _: True
-    else:
-        show_pred = show.__contains__
+    tokens = tokenize(
+        file,
+        section if section is not None else MATCH_NOTHING,
+        success if success is not None else MATCH_NOTHING,
+        failure if failure is not None else MATCH_NOTHING,
+    )
 
-    groups = group_by_section(tokens, show_pred)
+    if show is None:
+        def show_section(section):
+            return True
+    else:
+        def show_section(section):
+            return any(p.search(section) for p in show)
+
+    groups = group_by_section(tokens, show_section)
+
     groups = apply_filters(groups, [p for p in processors if p])
     groups = dedupe_blanks(groups)
-    status = do_output(groups)
-    
+    status, label = output_lines(groups)
+
+    if status is True:
+        echo(style(label, fg='green'), err=True)
+    if status is False:
+        echo(style(label, fg='red'), err=True)
+    if status is None:
+        label = label or '<no-section>'
+        # TODO: this is unexpected/red only if we have success and/or failure
+        echo(style(f"unexpected end during {style(label, bold=True)}", fg='red'), err=True)
+
     if process:
         process.wait()
         ctx.exit(process.returncode)
@@ -200,61 +219,78 @@ def process_pipeline(ctx, processors, section, success, failure):
         ctx.exit(0 if status else 1)
 
     # TODO:
-    # cwd replace (doable via sub, document)
-    # symlink replace (doable via sub, document)
+    # cwd replace (doable via sub, easier to do here)
+    # symlink replace (doable via sub, easier to do here)
     # per-section filters
     # path replace / color
     # class replace / color
-    # cli (polish)
+    # cli (polish; short command aliases)
 
 
 @cli.command()
-@click.argument('section')
-@click.pass_obj
-def show(obj, section):
-    # TODO: show --fixed-strings section
-    obj.setdefault('show', []).append(section)
-
-
-@cli.command()
-@click.option('-o', '--only', is_flag=True, help="Print only lines that match PATTERN.")
 @click.option('-F', '--fixed-strings', is_flag=True)
+@click.option('-i', '--ignore-case', is_flag=True)
+@click.argument('PATTERN')
+@click.pass_obj
+def show(obj, pattern, fixed_strings, ignore_case):
+    if fixed_strings:
+        pattern = re.escape(pattern)
+
+    flags = 0
+    if ignore_case:
+        flags |= re.IGNORECASE
+
+    pattern_re = re.compile(pattern, flags)
+
+    obj.setdefault('show', []).append(pattern_re)
+
+
+@cli.command()
+@click.option('-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN.")
+@click.option('-F', '--fixed-strings', is_flag=True)
+@click.option('-i', '--ignore-case', is_flag=True)
 @click.argument('pattern')
 @click.argument('repl')
-def sub(pattern, repl, only, fixed_strings):
+def sub(pattern, repl, only_matching, fixed_strings, ignore_case):
     if fixed_strings:
-            
-        def sub(line):
-            if only and pattern not in line:
-                return None
-            return line.replace(pattern, repl)
-        
-    else:
-        pattern_re = re.compile(pattern)
-            
-        def sub(line):
-            line, subn = pattern_re.subn(repl, line)
-            if only and not subn:
-                return None
-            return line
-        
+        pattern = re.escape(pattern)
+
+    flags = 0
+    if ignore_case:
+        flags |= re.IGNORECASE
+
+    pattern_re = re.compile(pattern, flags)
+
+    if fixed_strings:
+        repl = repl.replace('\\', r'\\')
+
+    def sub(line):
+        line, subn = pattern_re.subn(repl, line)
+        if only_matching and not subn:
+            return None
+        return line
+
     return sub
 
 
 @cli.command()
 @click.option('-F', '--fixed-strings', is_flag=True)
+@click.option('-i', '--ignore-case', is_flag=True)
 @click.argument('pattern')
-def search(pattern, fixed_strings):
+def match(pattern, fixed_strings, ignore_case):
     if fixed_strings:
-        
-        def search(line):
-            return pattern in line
+        pattern = re.escape(pattern)
 
-    else:
-        pattern_re = re.compile(pattern)
+    flags = 0
+    if ignore_case:
+        flags |= re.IGNORECASE
 
-        def search(line):
-            return bool(pattern_re.search(line))
+    pattern_re = re.compile(pattern, flags)
+
+    def search(line):
+        if pattern_re.search(line):
+            return line
+        return None
 
     return search
 
