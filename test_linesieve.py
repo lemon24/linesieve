@@ -45,15 +45,13 @@ SHORTEN_DATA = [
         'tst/one/mod.py': 'tst/.../mod.py',
         'tst/single.py': '.../single.py',
     },
-    # TODO: could this be shorter? .../x and .../b/x, maybe?
     {
         'a/x': 'a/x',
-        'a/b/x': 'a/b/x',
+        'a/b/x': '.../b/x',
     },
-    # TODO: this could definitely be .../b/x and .../c/x
     {
-        'a/d/b/x': 'a/.../b/x',
-        'a/d/c/x': 'a/.../c/x',
+        'a/d/b/x': '.../b/x',
+        'a/d/c/x': '.../c/x',
     },
 ]
 

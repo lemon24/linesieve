@@ -397,8 +397,6 @@ def run(obj, command, argument):
 
 
 def shorten_paths(paths, sep, ellipsis):
-    # some things could be done better, see tests for examples
-
     shortened = {l: l.split(sep) for l in paths}
 
     _do_end(shortened.values(), 0, -1)
@@ -440,8 +438,9 @@ def _do_start(paths, start, end):
         groups.setdefault(path[start], []).append(path)
 
     for group in groups.values():
-        for path in group:
-            path[start] = None
+        if len(groups) > 1:
+            for path in group:
+                path[start] = None
 
         if len(group) == 1:
             continue
