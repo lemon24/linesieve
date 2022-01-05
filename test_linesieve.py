@@ -22,5 +22,5 @@ def data(request):
 def test_data(data):
     args, input, output = data
     runner = CliRunner()
-    result = runner.invoke(cli, args, input=input)
+    result = runner.invoke(cli, args, input, catch_exceptions=False)
     assert result.output == output

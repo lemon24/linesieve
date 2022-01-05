@@ -8,7 +8,36 @@ import click
 from click import echo, style
 
 
-def tokenize(it, section_pattern, success_pattern, failure_pattern):
+def annotate_lines(lines, section_pattern, success_pattern, failure_pattern):
+    """Annotate lines with their corresponding section.
+    Stop when encountering a success/failure marker.
+
+    The section and success/failure markers are considered to be one line.
+
+    Yield (section, line) pairs, one for each content line.
+    If a section is empty, yield exactly one (section, None) pair.
+    The first section is always '', meaning "no section, yet".
+
+    At the end, yield exactly one of:
+
+    * (True, label), if the success pattern matched
+    * (False, label), if the failure pattern matched
+    * (None, None), if the lines ended before any of the above matched
+
+    The section and label are:
+
+    * the group named 'name', if any
+    * the first captured group, if any
+    * the entire match, otherwise
+
+    >>> lines = ['0', 'one:', '1', 'two:', 'three:', '3', 'end']
+    >>> list(annotate_lines(lines, '(.*):$', 'end', '$nothing'))
+    [('', '0'), ('one', '1'), ('two', None), ('three', '3'), (True, 'end')]
+
+    >>> list(annotate_lines([], '$nothing', '$nothing', '$nothing'))
+    [('', None), (None, None)]
+
+    """
     section_re = re.compile(section_pattern)
     success_re = re.compile(success_pattern)
     failure_re = re.compile(failure_pattern)
@@ -17,7 +46,7 @@ def tokenize(it, section_pattern, success_pattern, failure_pattern):
     ok = None
     section = ''
     yielded_lines = False
-    for line in chain(it, [None]):
+    for line in chain(lines, [None]):
         if line is not None:
             line = line.rstrip()
 
@@ -38,8 +67,8 @@ def tokenize(it, section_pattern, success_pattern, failure_pattern):
         if match:
             if not match.re.groups:
                 label = match.group()
-            elif 'l' in match.re.groupindex:
-                label = match.group('l')
+            elif 'name' in match.re.groupindex:
+                label = match.group('name')
             elif match.re.groups == 1:
                 label = match.group(1)
 
@@ -60,31 +89,19 @@ def tokenize(it, section_pattern, success_pattern, failure_pattern):
         yield section, line
 
 
-def group_by_section(it, show):
+def group_by_section(pairs):
+    """Group annotate_lines() output into (section, lines) pairs.
 
-    def groups():
-        grouped = groupby(it, itemgetter(0))
+    >>> pairs = [('', '0'), ('', '1'), ('section', None), (True, 'end')]
+    >>> groups = group_by_section(pairs)
+    >>> [(s, list(ls)) for s, ls in groups]
+    [('', ['0', '1']), ('section', []), (True, ['end'])]
 
-        prev_lines = None
-        for section, lines in grouped:
-            if section in {True, False, None}:
-                if not section and prev_lines is not None:
-                    yield prev_lines[0][0], prev_lines
-                yield section, lines
-                break
-
-            if show(section):
-                yield section, lines
-                prev_lines = None
-            else:
-                yield '', ()
-                prev_lines = list(lines)
-
+    """
     get_one = itemgetter(1)
 
-    for section, lines in groups():
-        lines =  map(get_one, lines)
-
+    for section, group in groupby(pairs, itemgetter(0)):
+        lines = map(get_one, group)
         first = next(lines, None)
 
         if first is None:
@@ -94,24 +111,48 @@ def group_by_section(it, show):
         yield section, chain([first], lines)
 
 
-def dedupe_blanks(groups):
+def filter_sections(groups, predicate):
+    """Filter (section, lines) pairs.
 
-    def dedupe(lines):
-        prev_line = ''
-        for line in lines:
-            stripped = line.strip()
-            if not (prev_line == line.strip() == ''):
-                yield line
-            prev_line = stripped
+    If predicate(section) is true, yield the pair as-is.
+    If predicate(section) is false, yield ('', ()) instead.
+
+    If the last section is False or None,
+    and the section before-last did not match the predicate,
+    yield the before-last pair (again) as-is before the last one.
+
+    >>> groups = [('1', 'i'), ('two', 'ii'), ('three', 'iii'), (None, '')]
+    >>> groups = filter_sections(groups, str.isdigit)
+    >>> list(groups)
+    [('1', 'i'), ('', ()), ('', ()), ('three', ['i', 'i', 'i']), (None, '')]
+
+    """
+    previous = None
 
     for section, lines in groups:
-        if section not in {True, False, None}:
-            lines = dedupe(lines)
-        yield section, lines
+        if section in {True, False, None}:
+            if not section and previous is not None:
+                yield previous
+            yield section, lines
+            break
+
+        if predicate(section):
+            yield section, lines
+            previous = None
+        else:
+            yield '', ()
+            previous = section, list(lines)
 
 
-def apply_filters(groups, filters):
+def filter_lines(groups, filters):
+    """Filter the lines in (section, lines) pairs.
 
+    >>> groups = [('one', 'a1B2')]
+    >>> groups = filter_lines(groups, [str.isalpha, str.upper])
+    >>> [(s, list(ls)) for s, ls in groups]
+    [('one', ['A', 'B'])]
+
+    """
     def filter_lines(lines):
         for line in lines:
             for filter in filters:
@@ -133,7 +174,43 @@ def apply_filters(groups, filters):
         yield section, lines
 
 
-def output_lines(groups, section_dot='.'):
+def dedupe_blank_lines(groups):
+    """Deduplicate blank lines in (section, lines) pairs.
+
+    >>> groups = [('one', ['', '1', '', '', '', '2', ''])]
+    >>> groups = dedupe_blank_lines(groups)
+    >>> [(s, list(ls)) for s, ls in groups]
+    [('one', ['1', '', '2', ''])]
+
+    """
+    def dedupe(lines):
+        prev_line = ''
+        for line in lines:
+            stripped = line.strip()
+            if not (prev_line == line.strip() == ''):
+                yield line
+            prev_line = stripped
+
+    for section, lines in groups:
+        if section not in {True, False, None}:
+            lines = dedupe(lines)
+        yield section, lines
+
+
+def output_sections(groups, section_dot='.'):
+    """Print (section, lines) pairs in a fancy way.
+
+    >>> groups = [('', 'ab'), ('', ''), ('', ''), ('one', 'c'), ('', ''), (True, 'xyz')]
+    >>> output_sections(groups)  # doctest: +SKIP
+    a
+    b
+    ..
+    one
+    c
+    .
+    (True, 'x')
+
+    """
     prev_section = None
     last_was_dot = False
 
@@ -148,7 +225,7 @@ def output_lines(groups, section_dot='.'):
             last_was_dot = False
 
         if section is True or section is False:
-            return section, next(lines)
+            return section, next(iter(lines))
 
         if section is None:
             return section, prev_section
@@ -183,12 +260,13 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     show = ctx.obj.get('show')
 
-    tokens = tokenize(
+    pairs = annotate_lines(
         file,
         section if section is not None else MATCH_NOTHING,
         success if success is not None else MATCH_NOTHING,
         failure if failure is not None else MATCH_NOTHING,
     )
+    groups = group_by_section(pairs)
 
     if show is None:
         def show_section(section):
@@ -197,11 +275,10 @@ def process_pipeline(ctx, processors, section, success, failure):
         def show_section(section):
             return any(p.search(section) for p in show)
 
-    groups = group_by_section(tokens, show_section)
-
-    groups = apply_filters(groups, [p for p in processors if p])
-    groups = dedupe_blanks(groups)
-    status, label = output_lines(groups)
+    groups = filter_sections(groups, show_section)
+    groups = filter_lines(groups, [p for p in processors if p])
+    groups = dedupe_blank_lines(groups)
+    status, label = output_sections(groups)
 
     if status is True:
         echo(style(label, fg='green'), err=True)
