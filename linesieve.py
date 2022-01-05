@@ -3,6 +3,8 @@ from itertools import chain, groupby
 from dataclasses import dataclass
 from operator import itemgetter
 import subprocess
+from glob import glob
+import os
 
 import click
 from click import echo, style
@@ -299,8 +301,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     # cwd replace (doable via sub, easier to do here)
     # symlink replace (doable via sub, easier to do here)
     # per-section filters
-    # path replace / color
-    # class replace / color
     # cli (polish; short command aliases)
 
 
@@ -395,6 +395,107 @@ def run(obj, command, argument):
     obj['process'] = process
     obj['file'] = process.stdout
 
+
+def shorten_paths(paths, sep, ellipsis):
+    # some things could be done better, see tests for examples
+
+    shortened = {l: l.split(sep) for l in paths}
+
+    _do_end(shortened.values(), 0, -1)
+
+    for original, mask in shortened.items():
+
+        path = []
+        for ps, ms in zip(original.split(sep), mask):
+
+            if ms is None:
+                path.append(ps)
+            else:
+                if not path or path[-1] != ellipsis:
+                    path.append(ellipsis)
+
+        shortened[original] = sep.join(path)
+
+    return shortened
+
+
+def _do_end(paths, start, end):
+    groups = {}
+    for path in paths:
+        groups.setdefault(path[end], []).append(path)
+
+    for group in groups.values():
+        for path in group:
+            path[end] = None
+
+        if len(group) == 1:
+            continue
+
+        _do_start(group, start, end-1)
+
+
+def _do_start(paths, start, end):
+    groups = {}
+    for path in paths:
+        groups.setdefault(path[start], []).append(path)
+
+    for group in groups.values():
+        for path in group:
+            path[start] = None
+
+        if len(group) == 1:
+            continue
+
+        _do_end(group, start+1, end)
+
+
+@cli.command()
+@click.option('-p', '--path', multiple=True)
+@click.option('--module', multiple=True)
+def sub_paths(path, module):
+    paths = [p for g in path for p in glob(g, recursive=True)]
+    replacements = shorten_paths(paths, os.sep, '...')
+
+    modules = set()
+    for ext in module:
+        ext = '.' + ext.lstrip('.')
+        for p in paths:
+            # TODO: depth should be configurable, assuming 1 for now
+            parts = p.removesuffix(ext).split(os.sep)[1:]
+            if not parts:
+                continue
+            for i in range(len(parts)):
+                modules.add('.'.join(parts[:i+1]))
+
+    if modules:
+        replacements.update(shorten_paths(modules, '.', '.'))
+
+    for k, v in replacements.items():
+        replacements[k] = style(v, fg='yellow')
+
+    replacements = dict(sorted(replacements.items(), key=lambda p: -len(p[0])))
+
+    # dead code, likely slow
+
+    def sub(line):
+        for old, new in replacements.items():
+            line = line.replace(old, new)
+        return line
+
+    # ...maybe this is faster? can still be improved
+    # * collapse common prefixes (maybe re.compile() already does that)
+    # * have a single pattern per run, not per sub-paths invocation
+
+    pattern_re = re.compile('|'.join(map(re.escape, replacements)))
+
+    def repl(match):
+        return replacements[match.group(0)]
+
+    def sub(line):
+        return pattern_re.sub(repl, line)
+
+
+    return sub
 
 
 if __name__ == '__main__':
