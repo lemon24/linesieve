@@ -305,6 +305,8 @@ def process_pipeline(ctx, processors, section, success, failure):
     # TODO:
     # cwd replace (doable via sub, easier to do here)
     # symlink replace (doable via sub, easier to do here)
+    # (maybe) runfilter "grep pattern"
+    # (maybe) sub --color
     # per-section filters
     # cli (polish; short command aliases)
 
@@ -371,7 +373,7 @@ def match(pattern, fixed_strings, ignore_case, invert_match):
     pattern_re = re.compile(pattern, flags)
 
     def search(line):
-        if pattern_re.search(line) and not invert_match:
+        if bool(pattern_re.search(line)) is not invert_match:
             return line
         return None
 

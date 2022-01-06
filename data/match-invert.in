@@ -1,0 +1,5 @@
+--success end match -v two
+one
+two
+three
+end
