@@ -308,9 +308,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     # per-section filters
     # cli (polish; short command aliases)
 
-    # FIXME:
-    # sub -o pattern '' disappears newlines completely
-
 
 @cli.command()
 @click.option('-F', '--fixed-strings', is_flag=True)

@@ -1,0 +1,5 @@
+--success end sub -o '\s*P ?' '' 
+P one
+P
+P two
+end
