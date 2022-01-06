@@ -7,6 +7,8 @@ from click.testing import CliRunner
 
 from linesieve import cli
 from linesieve import shorten_paths
+from linesieve import paths_to_modules
+
 
 ROOT = pathlib.Path(__file__).parent
 
@@ -60,4 +62,23 @@ SHORTEN_DATA = [
 def test_shorten_paths(output):
     assert shorten_paths(output, '/', '...') == output
 
+
+MODULE_PATHS = """
+src/one/mod.py
+src/one/two/mod.py
+tst/mod.py
+root.py
+""".split()
+
+
+@pytest.mark.parametrize('skip, recursive, output', [
+    (0, False, "src.one.mod src.one.two.mod tst.mod"),
+    (1, False, "one.mod one.two.mod"),
+    (0, True, "src.one.mod src.one src.one.two.mod src.one.two tst.mod"),
+    (1, True, "one.mod one.two.mod one.two"),
+])
+def test_paths_to_modules(skip, recursive, output):
+    assert paths_to_modules(
+        MODULE_PATHS, skip=skip, recursive=recursive
+    ) == set(output.split())
 

@@ -5,6 +5,7 @@ from operator import itemgetter
 import subprocess
 from glob import glob
 import os
+import os.path
 
 import click
 from click import echo, style
@@ -249,6 +250,10 @@ MATCH_NOTHING = '$nothing'
 @click.option('-f', '--failure', metavar='PATTERN')
 @click.pass_context
 def cli(ctx, **kwargs):
+    # future possible options:
+    # -s --section --section-start
+    # -e --section-end
+    # -l --section-lable
     ctx.obj = {}
 
 @cli.result_callback()
@@ -302,6 +307,10 @@ def process_pipeline(ctx, processors, section, success, failure):
     # symlink replace (doable via sub, easier to do here)
     # per-section filters
     # cli (polish; short command aliases)
+
+    # FIXME:
+    # sub -o pattern '' disappears newlines completely
+    # match -v pattern
 
 
 @cli.command()
@@ -448,25 +457,37 @@ def _do_start(paths, start, end):
         _do_end(group, start+1, end)
 
 
+def paths_to_modules(paths, newsep='.', skip=0, recursive=False):
+    min_length = 2
+    modules = set()
+
+    for path in paths:
+        parts = os.path.splitext(os.path.normpath(path))[0].split(os.sep)[skip:]
+        if len(parts) < min_length:
+            continue
+
+        start = min_length if recursive else len(parts)
+        for i in range(start, len(parts) + 1):
+            candidate = parts[:i]
+            if len(candidate) < 2:
+                continue
+
+            modules.add(newsep.join(candidate))
+
+    return modules
+
+
 @cli.command()
 @click.option('-p', '--path', multiple=True)
-@click.option('--module', multiple=True)
-def sub_paths(path, module):
+@click.option('--modules', is_flag=True)
+@click.option('--modules-skip', type=click.IntRange(0), default=0, show_default=True)
+@click.option('--modules-recursive', is_flag=True)
+def sub_paths(path, modules, modules_skip, modules_recursive):
     paths = [p for g in path for p in glob(g, recursive=True)]
     replacements = shorten_paths(paths, os.sep, '...')
 
-    modules = set()
-    for ext in module:
-        ext = '.' + ext.lstrip('.')
-        for p in paths:
-            # TODO: depth should be configurable, assuming 1 for now
-            parts = p.removesuffix(ext).split(os.sep)[1:]
-            if not parts:
-                continue
-            for i in range(len(parts)):
-                modules.add('.'.join(parts[:i+1]))
-
     if modules:
+        modules = paths_to_modules(paths, skip=modules_skip, recursive=modules_recursive)
         replacements.update(shorten_paths(modules, '.', '.'))
 
     for k, v in replacements.items():
@@ -485,7 +506,7 @@ def sub_paths(path, module):
     # * collapse common prefixes (maybe re.compile() already does that)
     # * have a single pattern per run, not per sub-paths invocation
 
-    pattern_re = re.compile('|'.join(map(re.escape, replacements)))
+    pattern_re = re.compile('|'.join(r'\b' + re.escape(r) + r'\b' for r in replacements))
 
     def repl(match):
         return replacements[match.group(0)]
