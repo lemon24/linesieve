@@ -310,7 +310,6 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     # FIXME:
     # sub -o pattern '' disappears newlines completely
-    # match -v pattern
 
 
 @cli.command()
@@ -360,10 +359,11 @@ def sub(pattern, repl, only_matching, fixed_strings, ignore_case):
 
 
 @cli.command()
+@click.option('-v', '--invert-match', is_flag=True)
 @click.option('-F', '--fixed-strings', is_flag=True)
 @click.option('-i', '--ignore-case', is_flag=True)
 @click.argument('pattern')
-def match(pattern, fixed_strings, ignore_case):
+def match(pattern, fixed_strings, ignore_case, invert_match):
     if fixed_strings:
         pattern = re.escape(pattern)
 
@@ -374,7 +374,7 @@ def match(pattern, fixed_strings, ignore_case):
     pattern_re = re.compile(pattern, flags)
 
     def search(line):
-        if pattern_re.search(line):
+        if pattern_re.search(line) and not invert_match:
             return line
         return None
 
