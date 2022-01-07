@@ -305,6 +305,7 @@ def process_pipeline(ctx, processors, section, success, failure):
         ctx.exit(0 if status else 1)
 
     # TODO:
+    # show/don't show failing section
     # cwd replace (doable via sub, easier to do here)
     # symlink replace (doable via sub, easier to do here)
     # (maybe) runfilter "grep pattern"
@@ -362,12 +363,19 @@ def sub(pattern, repl, fixed_strings, only_matching):
 @cli.command()
 @pattern_argument
 @click.option('-v', '--invert-match', is_flag=True)
-def match(pattern, fixed_strings, invert_match):
+@click.option('-o', '--only-matching', is_flag=True, help="Prints only the matching part of the lines.")
+def match(pattern, fixed_strings, invert_match, only_matching):
 
     def search(line):
-        if bool(pattern.search(line)) is not invert_match:
-            return line
-        return None
+        if not only_matching:
+            if bool(pattern.search(line)) is not invert_match:
+                return line
+            return None
+        else:
+            matches = pattern.findall(line)
+            if matches:
+                return '\n'.join(matches)
+            return None
 
     return search
 
