@@ -148,16 +148,16 @@ def filter_sections(groups, predicate):
             previous = section, list(lines)
 
 
-def filter_lines(groups, filters):
+def filter_lines(groups, get_filters):
     """Filter the lines in (section, lines) pairs.
 
     >>> groups = [('one', 'a1B2')]
-    >>> groups = filter_lines(groups, [str.isalpha, str.upper])
+    >>> groups = filter_lines(groups, lambda _: [str.isalpha, str.upper])
     >>> [(s, list(ls)) for s, ls in groups]
     [('one', ['A', 'B'])]
 
     """
-    def filter_lines(lines):
+    def filter_lines(lines, filters):
         for line in lines:
             for filter in filters:
                 rv = filter(line)
@@ -174,7 +174,9 @@ def filter_lines(groups, filters):
 
     for section, lines in groups:
         if section not in {True, False, None}:
-            lines = filter_lines(lines)
+            filters = list(get_filters(section))
+            if filters:
+                lines = filter_lines(lines, filters)
         yield section, lines
 
 
@@ -245,7 +247,7 @@ def output_sections(groups, section_dot='.'):
 
 # -s --section --section-start
 # -e --section-end
-# -n --section-name # similar to annotate_lines() marker
+# -n --section-name # same as annotate_lines() marker
 
 @click.group(chain=True, invoke_without_command=True)
 @click.option('-s', '--section', metavar='PATTERN')
@@ -285,7 +287,15 @@ def process_pipeline(ctx, processors, section, success, failure):
             return any(p.search(section) for p in show)
 
     groups = filter_sections(groups, show_section)
-    groups = filter_lines(groups, [p for p in processors if p])
+
+    processors = [p for p in processors if p]
+
+    def get_filters(section):
+        for section_re, filter in processors:
+            if not section_re or section_re.search(section):
+                yield filter
+
+    groups = filter_lines(groups, get_filters)
     groups = dedupe_blank_lines(groups)
     status, label = output_sections(groups)
 
@@ -306,11 +316,11 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     # TODO:
     # show/don't show failing section
+    # if no -k/-f was given, don't say unexpected end
     # cwd replace (doable via sub, easier to do here)
     # symlink replace (doable via sub, easier to do here)
     # (maybe) runfilter "grep pattern"
     # (maybe) sub --color
-    # per-section filters
     # cli (polish; short command aliases)
 
 
@@ -321,7 +331,6 @@ def pattern_argument(fn):
     @click.argument('PATTERN')
     @wraps(fn)
     def wrapper(*args, pattern, fixed_strings, ignore_case, **kwargs):
-
         if fixed_strings:
             pattern = re.escape(pattern)
 
@@ -332,6 +341,20 @@ def pattern_argument(fn):
         pattern_re = re.compile(pattern, flags)
 
         return fn(*args, pattern=pattern_re, fixed_strings=fixed_strings, **kwargs)
+
+    return wrapper
+
+
+def section_option(fn):
+
+    @click.option('-s', '--section', metavar='PATTERN')
+    @wraps(fn)
+    def wrapper(*args, section, **kwargs):
+        rv = fn(*args, **kwargs)
+        if rv is None:
+            return None
+        section_re = re.compile(section) if section is not None else None
+        return section_re, rv
 
     return wrapper
 
@@ -347,6 +370,7 @@ def show(obj, pattern, fixed_strings):
 @pattern_argument
 @click.argument('repl')
 @click.option('-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN.")
+@section_option
 def sub(pattern, repl, fixed_strings, only_matching):
     if fixed_strings:
         repl = repl.replace('\\', r'\\')
@@ -362,8 +386,9 @@ def sub(pattern, repl, fixed_strings, only_matching):
 
 @cli.command()
 @pattern_argument
-@click.option('-v', '--invert-match', is_flag=True)
 @click.option('-o', '--only-matching', is_flag=True, help="Prints only the matching part of the lines.")
+@click.option('-v', '--invert-match', is_flag=True)
+@section_option
 def match(pattern, fixed_strings, invert_match, only_matching):
 
     def search(line):
@@ -477,12 +502,15 @@ def paths_to_modules(paths, newsep='.', skip=0, recursive=False):
 
 
 @cli.command()
-@click.option('-p', '--path', multiple=True)
+@click.option('--include', multiple=True, metavar='GLOB')
 @click.option('--modules', is_flag=True)
 @click.option('--modules-skip', type=click.IntRange(0), default=0, show_default=True)
 @click.option('--modules-recursive', is_flag=True)
-def sub_paths(path, modules, modules_skip, modules_recursive):
-    paths = [p for g in path for p in glob(g, recursive=True)]
+@section_option
+def sub_paths(include, modules, modules_skip, modules_recursive):
+    # TODO: use braceexpand for path
+
+    paths = [p for g in include for p in glob(g, recursive=True)]
     replacements = shorten_paths(paths, os.sep, '...')
 
     if modules:
@@ -519,10 +547,5 @@ def sub_paths(path, modules, modules_skip, modules_recursive):
 
 if __name__ == '__main__':
     cli()
-
-
-
-
-
 
 
