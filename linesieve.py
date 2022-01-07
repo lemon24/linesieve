@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from operator import itemgetter
 import subprocess
 from glob import glob
+from functools import wraps
 import os
 import os.path
 
@@ -242,7 +243,9 @@ def output_sections(groups, section_dot='.'):
         prev_section = section
 
 
-MATCH_NOTHING = '$nothing'
+# -s --section --section-start
+# -e --section-end
+# -n --section-name # similar to annotate_lines() marker
 
 @click.group(chain=True, invoke_without_command=True)
 @click.option('-s', '--section', metavar='PATTERN')
@@ -250,11 +253,10 @@ MATCH_NOTHING = '$nothing'
 @click.option('-f', '--failure', metavar='PATTERN')
 @click.pass_context
 def cli(ctx, **kwargs):
-    # future possible options:
-    # -s --section --section-start
-    # -e --section-end
-    # -l --section-lable
     ctx.obj = {}
+
+
+MATCH_NOTHING = '$nothing'
 
 @cli.result_callback()
 @click.pass_context
@@ -311,45 +313,45 @@ def process_pipeline(ctx, processors, section, success, failure):
     # cli (polish; short command aliases)
 
 
+def pattern_argument(fn):
+
+    @click.option('-F', '--fixed-strings', is_flag=True)
+    @click.option('-i', '--ignore-case', is_flag=True)
+    @click.argument('PATTERN')
+    @wraps(fn)
+    def wrapper(*args, pattern, fixed_strings, ignore_case, **kwargs):
+
+        if fixed_strings:
+            pattern = re.escape(pattern)
+
+        flags = 0
+        if ignore_case:
+            flags |= re.IGNORECASE
+
+        pattern_re = re.compile(pattern, flags)
+
+        return fn(*args, pattern=pattern_re, fixed_strings=fixed_strings, **kwargs)
+
+    return wrapper
+
+
 @cli.command()
-@click.option('-F', '--fixed-strings', is_flag=True)
-@click.option('-i', '--ignore-case', is_flag=True)
-@click.argument('PATTERN')
+@pattern_argument
 @click.pass_obj
-def show(obj, pattern, fixed_strings, ignore_case):
-    if fixed_strings:
-        pattern = re.escape(pattern)
-
-    flags = 0
-    if ignore_case:
-        flags |= re.IGNORECASE
-
-    pattern_re = re.compile(pattern, flags)
-
-    obj.setdefault('show', []).append(pattern_re)
+def show(obj, pattern, fixed_strings):
+    obj.setdefault('show', []).append(pattern)
 
 
 @cli.command()
-@click.option('-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN.")
-@click.option('-F', '--fixed-strings', is_flag=True)
-@click.option('-i', '--ignore-case', is_flag=True)
-@click.argument('pattern')
+@pattern_argument
 @click.argument('repl')
-def sub(pattern, repl, only_matching, fixed_strings, ignore_case):
-    if fixed_strings:
-        pattern = re.escape(pattern)
-
-    flags = 0
-    if ignore_case:
-        flags |= re.IGNORECASE
-
-    pattern_re = re.compile(pattern, flags)
-
+@click.option('-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN.")
+def sub(pattern, repl, fixed_strings, only_matching):
     if fixed_strings:
         repl = repl.replace('\\', r'\\')
 
     def sub(line):
-        line, subn = pattern_re.subn(repl, line)
+        line, subn = pattern.subn(repl, line)
         if only_matching and not subn:
             return None
         return line
@@ -358,22 +360,12 @@ def sub(pattern, repl, only_matching, fixed_strings, ignore_case):
 
 
 @cli.command()
+@pattern_argument
 @click.option('-v', '--invert-match', is_flag=True)
-@click.option('-F', '--fixed-strings', is_flag=True)
-@click.option('-i', '--ignore-case', is_flag=True)
-@click.argument('pattern')
-def match(pattern, fixed_strings, ignore_case, invert_match):
-    if fixed_strings:
-        pattern = re.escape(pattern)
-
-    flags = 0
-    if ignore_case:
-        flags |= re.IGNORECASE
-
-    pattern_re = re.compile(pattern, flags)
+def match(pattern, fixed_strings, invert_match):
 
     def search(line):
-        if bool(pattern_re.search(line)) is not invert_match:
+        if bool(pattern.search(line)) is not invert_match:
             return line
         return None
 
