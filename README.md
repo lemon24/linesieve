@@ -1,8 +1,18 @@
 *This is my text munging tool. There are many like it, but this one is mine.*
 
-**linesieve** is a sacrilegious combination of `grep`, `sed s///`, and watered down `awk`, with some *very* specific features, all done out of spite.
+**linesieve** is an unholy blend of `grep`, `sed`, and `awk`, 
+with *very* specific features, born out of spite.
 
-TODO: features
+Features:
+
+* line-oriented
+* section-oriented
+  * show specific sections
+  * show failing sections
+* colors!
+* match/sub with the full power of [re](https://docs.python.org/3/library/re.html)
+* filter pipelines
+* TODO: specific filters
 
 TODO: git example
 
