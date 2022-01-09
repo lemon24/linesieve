@@ -12,6 +12,9 @@ import click
 from click import echo, style
 
 
+__version__ = '1.0.dev0'
+
+
 def annotate_lines(lines, section_pattern, success_pattern, failure_pattern):
     """Annotate lines with their corresponding section.
     Stop when encountering a success/failure marker.
@@ -592,9 +595,4 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
 
 
     return sub
-
-
-if __name__ == '__main__':
-    cli()
-
 
