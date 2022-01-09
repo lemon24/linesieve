@@ -1,0 +1,6 @@
+--section '(\S+):$' --failure fail show '$nothing' 
+one:
+1
+two:
+2
+fail

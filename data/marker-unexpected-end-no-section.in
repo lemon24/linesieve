@@ -1,0 +1,2 @@
+--section '(\S+):$' --success ok --failure fail show $nothing
+aaa

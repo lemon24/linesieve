@@ -1,5 +1,4 @@
---success end match -v two
+match -v two
 one
 two
 three
-end

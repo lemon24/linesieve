@@ -1,0 +1,5 @@
+--section '(\S+):$' --success ok --failure fail show $nothing
+one:
+1
+two:
+2

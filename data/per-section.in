@@ -1,4 +1,4 @@
---section '(\S+):$' --success end sub -s one a aa match -s two -o '[axy]' sub '^' '*'
+--section '(\S+):$' sub -s one a aa match -s two -o '[axy]' sub '^' '*'
 one:
 a
 xb
@@ -7,4 +7,3 @@ two:
 a
 xb
 yc
-end

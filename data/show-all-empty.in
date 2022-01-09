@@ -1,5 +1,4 @@
---section '(\S+):$' --success end
+--section '(\S+):$'
 one:
 two:
 three:
-end

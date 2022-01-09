@@ -115,7 +115,7 @@ def group_by_section(pairs):
         yield section, chain([first], lines)
 
 
-def filter_sections(groups, predicate):
+def filter_sections(groups, predicate, last_before={None, False}):
     """Filter (section, lines) pairs.
 
     If predicate(section) is true, yield the pair as-is.
@@ -135,7 +135,7 @@ def filter_sections(groups, predicate):
 
     for section, lines in groups:
         if section in {True, False, None}:
-            if not section and previous is not None:
+            if section in last_before and previous is not None:
                 yield previous
             yield section, lines
             break
@@ -225,7 +225,6 @@ def output_sections(groups, section_dot='.'):
         if section == '' and prev_section is not None:
             echo(style(section_dot, dim=True), err=True, nl=False)
             last_was_dot = True
-
         elif last_was_dot:
             echo(err=True)
             last_was_dot = False
@@ -239,6 +238,13 @@ def output_sections(groups, section_dot='.'):
         if section:
             echo(style(section, dim=True), err=True)
 
+        line = next(lines, None)
+        if line:
+            if last_was_dot:
+                echo(err=True)
+                last_was_dot = False
+            echo(line)
+
         for line in lines:
             echo(line)
 
@@ -251,8 +257,8 @@ def output_sections(groups, section_dot='.'):
 
 @click.group(chain=True, invoke_without_command=True)
 @click.option('-s', '--section', metavar='PATTERN')
-@click.option('-k', '--success', metavar='PATTERN')
-@click.option('-f', '--failure', metavar='PATTERN')
+@click.option('--success', metavar='PATTERN')
+@click.option('--failure', metavar='PATTERN')
 @click.pass_context
 def cli(ctx, **kwargs):
     ctx.obj = {}
@@ -286,7 +292,11 @@ def process_pipeline(ctx, processors, section, success, failure):
         def show_section(section):
             return any(p.search(section) for p in show)
 
-    groups = filter_sections(groups, show_section)
+    last_before = {False}
+    if success is not None and failure is not None:
+        last_before.add(None)
+
+    groups = filter_sections(groups, show_section, last_before)
 
     processors = [p for p in processors if p]
 
@@ -299,28 +309,63 @@ def process_pipeline(ctx, processors, section, success, failure):
     groups = dedupe_blank_lines(groups)
     status, label = output_sections(groups)
 
+    message = None
+    returncode = 0
+
     if status is True:
-        echo(style(label, fg='green'), err=True)
-    if status is False:
-        echo(style(label, fg='red'), err=True)
-    if status is None:
+        message = style(label, fg='green')
+        returncode = 0
+
+    elif status is False:
+        message = style(label, fg='red')
+        returncode = 1
+
+    elif status is None:
+        # no success or failure -> end is expected (use returncode if available)
+        # failure only          -> end is success (unless returncode says failure)
+        # success only          -> end is failure (unless returncode says success)
+        # success and failure   -> end is unexpected
+
         label = label or '<no-section>'
-        # TODO: this is unexpected/red only if we have success and/or failure
-        echo(style(f"unexpected end during {style(label, bold=True)}", fg='red'), err=True)
+        if success is not None and failure is not None:
+            message = style(f"unexpected end during {style(label, bold=True)}", fg='red')
+            returncode = 1
+
+    if message:
+        echo(message, err=True)
 
     if process:
         process.wait()
-        ctx.exit(process.returncode)
+        returncode = process.returncode
+        if not message:
+            message = style(
+                f"command returned exit code {style(str(returncode), bold=True)}",
+                fg=('green' if returncode == 0 else 'red')
+            )
+        else:
+            message = None
+
     else:
-        ctx.exit(0 if status else 1)
+        if not message:
+            assert success is None or failure is None, (success, failure)
+            if success is not None:
+                message = style("success marker not found", fg='red')
+                returncode = 1
+            if failure is not None:
+                message = style("failure marker not found", fg='green')
+                returncode = 0
+        else:
+            message = None
+
+    if message:
+        echo(message, err=True)
+
+    ctx.exit(returncode)
 
     # TODO:
-    # show/don't show failing section
-    # if no -k/-f was given, don't say unexpected end
     # cwd replace (doable via sub, easier to do here)
     # symlink replace (doable via sub, easier to do here)
     # (maybe) runfilter "grep pattern"
-    # (maybe) sub --color
     # cli (polish; short command aliases)
 
 

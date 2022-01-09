@@ -1,2 +1,5 @@
 --section '(\S+):$'
-aaa
+one:
+1
+two:
+2
