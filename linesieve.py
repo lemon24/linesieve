@@ -434,7 +434,7 @@ def sub(pattern, repl, fixed_strings, only_matching):
 @click.option('-o', '--only-matching', is_flag=True, help="Prints only the matching part of the lines.")
 @click.option('-v', '--invert-match', is_flag=True)
 @section_option
-def match(pattern, fixed_strings, invert_match, only_matching):
+def match(pattern, fixed_strings, only_matching, invert_match):
 
     def search(line):
         if not only_matching:
@@ -444,6 +444,10 @@ def match(pattern, fixed_strings, invert_match, only_matching):
         else:
             matches = pattern.findall(line)
             if matches:
+                matches = [
+                    m if isinstance(m, str) else '\t'.join(m)
+                    for m in matches
+                ]
                 return '\n'.join(matches)
             return None
 
