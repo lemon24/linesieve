@@ -3,7 +3,7 @@
 **linesieve** is an unholy blend of `grep`, `sed`, and `awk`, 
 with *very* specific features, born out of spite.
 
-### Features
+#### Features
 
 * line-oriented
 * section-oriented
@@ -14,9 +14,9 @@ with *very* specific features, born out of spite.
 * colors!
 * TODO: specific filters
 
-### Examples
+#### Examples
 
-#### Get all options used by any git command
+##### Get all options used by any git command
 
 Note that some of the man pages contain multiple OPTIONS sections (e.g. ADVANCED OPTIONS).
 
@@ -57,5 +57,5 @@ Output:
 ...
 ```
 
-#### TODO: Ant output
+##### TODO: Ant output
 
