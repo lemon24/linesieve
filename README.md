@@ -1,5 +1,3 @@
-# linesieve
-
 *This is my text munging tool. There are many like it, but this one is mine.*
 
 **linesieve** is an unholy blend of `grep`, `sed`, and `awk`,
