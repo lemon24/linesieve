@@ -7,11 +7,11 @@ Features:
 
 * line-oriented
 * section-oriented
-  * show specific sections
-  * show failing sections
-* colors!
+  * show only matching sections
+  * show the failing section
 * match/sub with the full power of [re](https://docs.python.org/3/library/re.html)
-* filter pipelines
+* chain filters into pipelines
+* colors!
 * TODO: specific filters
 
 TODO: git example
