@@ -1,4 +1,4 @@
-sub -o '\s*P ?' '' 
+sub -o '\s*P ?' ''
 P one
 P
 P two

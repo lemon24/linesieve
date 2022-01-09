@@ -2,7 +2,7 @@
 
 *This is my text munging tool. There are many like it, but this one is mine.*
 
-**linesieve** is an unholy blend of `grep`, `sed`, and `awk`, 
+**linesieve** is an unholy blend of `grep`, `sed`, and `awk`,
 with *very* specific features, born out of spite.
 
 ## Features
@@ -26,7 +26,7 @@ Note that some of the man pages contain multiple OPTIONS sections (e.g. ADVANCED
 export MANWIDTH=9999
 
 function man-section {
-    col -b | python3 -m linesieve -s '^[A-Z ()-]+$' show "$@" 
+    col -b | python3 -m linesieve -s '^[A-Z ()-]+$' show "$@"
 }
 
 man git \
@@ -40,7 +40,7 @@ man git \
 | sort -dfu
 
 ```
-  
+
 Output:
 
 ```
@@ -60,4 +60,3 @@ Output:
 ```
 
 ### TODO: Ant output
-

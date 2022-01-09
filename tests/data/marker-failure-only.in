@@ -1,4 +1,4 @@
---section '(\S+):$' --failure fail show '$nothing' 
+--section '(\S+):$' --failure fail show '$nothing'
 one:
 1
 two:

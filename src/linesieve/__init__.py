@@ -1,18 +1,18 @@
-import re
-from itertools import chain, groupby
-from dataclasses import dataclass
-from operator import itemgetter
-import subprocess
-from glob import glob
-from functools import wraps
-import os
 import os.path
+import re
+import subprocess
+from functools import wraps
+from glob import glob
+from itertools import chain
+from itertools import groupby
+from operator import itemgetter
 
 import click
-from click import echo, style
+from click import echo
+from click import style
 
 
-__version__ = '1.0.dev0'
+__version__ = '1.0a1'
 
 
 def annotate_lines(lines, section_pattern, success_pattern, failure_pattern):
@@ -160,6 +160,7 @@ def filter_lines(groups, get_filters):
     [('one', ['A', 'B'])]
 
     """
+
     def filter_lines(lines, filters):
         for line in lines:
             for filter in filters:
@@ -192,6 +193,7 @@ def dedupe_blank_lines(groups):
     [('one', ['1', '', '2', ''])]
 
     """
+
     def dedupe(lines):
         prev_line = ''
         for line in lines:
@@ -258,6 +260,7 @@ def output_sections(groups, section_dot='.'):
 # -e --section-end
 # -n --section-name # same as annotate_lines() marker
 
+
 @click.group(chain=True, invoke_without_command=True)
 @click.option('-s', '--section', metavar='PATTERN')
 @click.option('--success', metavar='PATTERN')
@@ -268,6 +271,7 @@ def cli(ctx, **kwargs):
 
 
 MATCH_NOTHING = '$nothing'
+
 
 @cli.result_callback()
 @click.pass_context
@@ -289,9 +293,12 @@ def process_pipeline(ctx, processors, section, success, failure):
     groups = group_by_section(pairs)
 
     if show is None:
+
         def show_section(section):
             return True
+
     else:
+
         def show_section(section):
             return any(p.search(section) for p in show)
 
@@ -331,7 +338,9 @@ def process_pipeline(ctx, processors, section, success, failure):
 
         label = label or '<no-section>'
         if success is not None and failure is not None:
-            message = style(f"unexpected end during {style(label, bold=True)}", fg='red')
+            message = style(
+                f"unexpected end during {style(label, bold=True)}", fg='red'
+            )
             returncode = 1
 
     if message:
@@ -343,7 +352,7 @@ def process_pipeline(ctx, processors, section, success, failure):
         if not message:
             message = style(
                 f"command returned exit code {style(str(returncode), bold=True)}",
-                fg=('green' if returncode == 0 else 'red')
+                fg=('green' if returncode == 0 else 'red'),
             )
         else:
             message = None
@@ -373,7 +382,6 @@ def process_pipeline(ctx, processors, section, success, failure):
 
 
 def pattern_argument(fn):
-
     @click.option('-F', '--fixed-strings', is_flag=True)
     @click.option('-i', '--ignore-case', is_flag=True)
     @click.argument('PATTERN')
@@ -394,7 +402,6 @@ def pattern_argument(fn):
 
 
 def section_option(fn):
-
     @click.option('-s', '--section', metavar='PATTERN')
     @wraps(fn)
     def wrapper(*args, section, **kwargs):
@@ -417,7 +424,9 @@ def show(obj, pattern, fixed_strings):
 @cli.command()
 @pattern_argument
 @click.argument('repl')
-@click.option('-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN.")
+@click.option(
+    '-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN."
+)
 @section_option
 def sub(pattern, repl, fixed_strings, only_matching):
     if fixed_strings:
@@ -434,11 +443,15 @@ def sub(pattern, repl, fixed_strings, only_matching):
 
 @cli.command()
 @pattern_argument
-@click.option('-o', '--only-matching', is_flag=True, help="Prints only the matching part of the lines.")
+@click.option(
+    '-o',
+    '--only-matching',
+    is_flag=True,
+    help="Prints only the matching part of the lines.",
+)
 @click.option('-v', '--invert-match', is_flag=True)
 @section_option
 def match(pattern, fixed_strings, only_matching, invert_match):
-
     def search(line):
         if not only_matching:
             if bool(pattern.search(line)) is not invert_match:
@@ -447,10 +460,7 @@ def match(pattern, fixed_strings, only_matching, invert_match):
         else:
             matches = pattern.findall(line)
             if matches:
-                matches = [
-                    m if isinstance(m, str) else '\t'.join(m)
-                    for m in matches
-                ]
+                matches = [m if isinstance(m, str) else '\t'.join(m) for m in matches]
                 return '\n'.join(matches)
             return None
 
@@ -482,7 +492,7 @@ def run(obj, command, argument):
 
 
 def shorten_paths(paths, sep, ellipsis):
-    shortened = {l: l.split(sep) for l in paths}
+    shortened = {path: path.split(sep) for path in paths}
 
     _do_end(shortened.values(), 0, -1)
 
@@ -514,7 +524,7 @@ def _do_end(paths, start, end):
         if len(group) == 1:
             continue
 
-        _do_start(group, start, end-1)
+        _do_start(group, start, end - 1)
 
 
 def _do_start(paths, start, end):
@@ -530,7 +540,7 @@ def _do_start(paths, start, end):
         if len(group) == 1:
             continue
 
-        _do_end(group, start+1, end)
+        _do_end(group, start + 1, end)
 
 
 def paths_to_modules(paths, newsep='.', skip=0, recursive=False):
@@ -566,7 +576,9 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     replacements = shorten_paths(paths, os.sep, '...')
 
     if modules:
-        modules = paths_to_modules(paths, skip=modules_skip, recursive=modules_recursive)
+        modules = paths_to_modules(
+            paths, skip=modules_skip, recursive=modules_recursive
+        )
         replacements.update(shorten_paths(modules, '.', '.'))
 
     for k, v in replacements.items():
@@ -585,14 +597,14 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     # * collapse common prefixes (maybe re.compile() already does that)
     # * have a single pattern per run, not per sub-paths invocation
 
-    pattern_re = re.compile('|'.join(r'\b' + re.escape(r) + r'\b' for r in replacements))
+    pattern_re = re.compile(
+        '|'.join(r'\b' + re.escape(r) + r'\b' for r in replacements)
+    )
 
     def repl(match):
         return replacements[match.group(0)]
 
-    def sub(line):
+    def sub_paths(line):
         return pattern_re.sub(repl, line)
 
-
-    return sub
-
+    return sub_paths

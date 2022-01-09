@@ -16,7 +16,7 @@ readonly PROJECT_ROOT=$( pwd )
 
 
 function install-dev {
-    pip install -e '.[tests,docs]'
+    pip install -e '.[tests,dev]'
     pre-commit install
 }
 
