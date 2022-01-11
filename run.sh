@@ -25,7 +25,7 @@ function test {
     pytest "$@"
 }
 
-function coverage {
+function coverage-all {
     pytest --cov
     coverage html
 }
