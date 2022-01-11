@@ -378,6 +378,10 @@ def process_pipeline(ctx, processors, section, success, failure):
     # cwd replace (doable via sub, easier to do here)
     # symlink replace (doable via sub, easier to do here)
     # (maybe) runfilter "grep pattern"
+    # (maybe) sub color
+    # head/tail per section
+    # match -e pattern -e pattern (hard to do with click)
+    # section, failure, success to stdout, not err
     # cli (polish; short command aliases)
 
 
@@ -479,7 +483,7 @@ def open(obj, file):
 @click.argument('command')
 @click.argument('argument', nargs=-1)
 @click.pass_obj
-def run(obj, command, argument):
+def exec(obj, command, argument):
     assert not obj.get('file')
     process = subprocess.Popen(
         (command,) + argument,
