@@ -1,6 +1,7 @@
 import os.path
 import re
 import subprocess
+from functools import lru_cache
 from functools import wraps
 from glob import glob
 from itertools import chain
@@ -15,7 +16,15 @@ from click import style
 __version__ = '1.0a1'
 
 
-def annotate_lines(lines, section_pattern, success_pattern, failure_pattern):
+MATCH_NOTHING = '$nothing'
+
+
+def annotate_lines(
+    lines,
+    section_pattern=None,
+    success_pattern=None,
+    failure_pattern=None,
+):
     """Annotate lines with their corresponding section.
     Stop when encountering a success/failure marker.
 
@@ -38,16 +47,17 @@ def annotate_lines(lines, section_pattern, success_pattern, failure_pattern):
     * the entire match, otherwise
 
     >>> lines = ['0', 'one:', '1', 'two:', 'three:', '3', 'end']
-    >>> list(annotate_lines(lines, '(.*):$', 'end', '$nothing'))
+    >>> list(annotate_lines(lines, '(.*):$', 'end'))
     [('', '0'), ('one', '1'), ('two', None), ('three', '3'), (True, 'end')]
 
-    >>> list(annotate_lines([], '$nothing', '$nothing', '$nothing'))
+    >>> list(annotate_lines([]))
     [('', None), (None, None)]
 
     """
-    section_re = re.compile(section_pattern)
-    success_re = re.compile(success_pattern)
-    failure_re = re.compile(failure_pattern)
+    section_re, success_re, failure_re = [
+        re.compile(pattern if pattern is not None else MATCH_NOTHING)
+        for pattern in (section_pattern, success_pattern, failure_pattern)
+    ]
 
     done = False
     ok = None
@@ -118,7 +128,7 @@ def group_by_section(pairs):
         yield section, chain([first], lines)
 
 
-def filter_sections(groups, predicate, last_before={None, False}):
+def filter_sections(groups, predicate, end_is_failure=True):
     """Filter (section, lines) pairs.
 
     If predicate(section) is true, yield the pair as-is.
@@ -134,6 +144,10 @@ def filter_sections(groups, predicate, last_before={None, False}):
     [('1', 'i'), ('', ()), ('', ()), ('three', ['i', 'i', 'i']), (None, '')]
 
     """
+    last_before = {False}
+    if end_is_failure:
+        last_before.add(None)
+
     previous = None
 
     for section, lines in groups:
@@ -178,7 +192,7 @@ def filter_lines(groups, get_filters):
 
     for section, lines in groups:
         if section not in {True, False, None}:
-            filters = list(get_filters(section))
+            filters = get_filters(section)
             if filters:
                 lines = filter_lines(lines, filters)
         yield section, lines
@@ -206,6 +220,45 @@ def dedupe_blank_lines(groups):
         if section not in {True, False, None}:
             lines = dedupe(lines)
         yield section, lines
+
+
+def make_pipeline(
+    file,
+    section_pattern,
+    success_pattern,
+    failure_pattern,
+    section_filters,
+    line_filters,
+):
+    groups = group_by_section(
+        annotate_lines(file, section_pattern, success_pattern, failure_pattern)
+    )
+
+    if not section_filters:
+
+        def show_section(section):
+            return True
+
+    else:
+
+        def show_section(section):
+            return any(p.search(section) for p in section_filters)
+
+    end_is_failure = None not in {success_pattern, failure_pattern}
+    groups = filter_sections(groups, show_section, end_is_failure)
+
+    @lru_cache
+    def get_filters(section):
+        rv = []
+        for section_re, filter in line_filters:
+            if not section_re or section_re.search(section):
+                rv.append(filter)
+        return rv
+
+    groups = filter_lines(groups, get_filters)
+    groups = dedupe_blank_lines(groups)
+
+    return groups
 
 
 def output_sections(groups, section_dot='.'):
@@ -270,9 +323,6 @@ def cli(ctx, **kwargs):
     ctx.obj = {}
 
 
-MATCH_NOTHING = '$nothing'
-
-
 @cli.result_callback()
 @click.pass_context
 def process_pipeline(ctx, processors, section, success, failure):
@@ -281,43 +331,13 @@ def process_pipeline(ctx, processors, section, success, failure):
         file = click.get_text_stream('stdin')
 
     process = ctx.obj.get('process')
-
     show = ctx.obj.get('show')
-
-    pairs = annotate_lines(
-        file,
-        section if section is not None else MATCH_NOTHING,
-        success if success is not None else MATCH_NOTHING,
-        failure if failure is not None else MATCH_NOTHING,
-    )
-    groups = group_by_section(pairs)
-
-    if show is None:
-
-        def show_section(section):
-            return True
-
-    else:
-
-        def show_section(section):
-            return any(p.search(section) for p in show)
-
-    last_before = {False}
-    if success is not None and failure is not None:
-        last_before.add(None)
-
-    groups = filter_sections(groups, show_section, last_before)
 
     processors = [p for p in processors if p]
 
-    def get_filters(section):
-        for section_re, filter in processors:
-            if not section_re or section_re.search(section):
-                yield filter
-
-    groups = filter_lines(groups, get_filters)
-    groups = dedupe_blank_lines(groups)
-    status, label = output_sections(groups)
+    status, label = output_sections(
+        make_pipeline(file, section, success, failure, show, processors)
+    )
 
     message = None
     returncode = 0
