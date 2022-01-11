@@ -3,6 +3,9 @@
 **linesieve** is an unholy blend of `grep`, `sed`, and `awk`,
 with *very* specific features, born out of spite.
 
+
+[![build](https://github.com/lemon24/linesieve/actions/workflows/build.yaml/badge.svg)](https://github.com/lemon24/linesieve/actions/workflows/build.yaml) [![codecov](https://codecov.io/gh/lemon24/linesieve/branch/main/graph/badge.svg?token=MrpEP5cg24)](https://codecov.io/gh/lemon24/linesieve) [![PyPI](https://img.shields.io/pypi/v/linesieve)](https://pypi.org/project/linesieve/) [![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 ## Features
 
 * line-oriented
