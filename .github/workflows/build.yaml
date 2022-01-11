@@ -22,7 +22,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - run: pip install '.[tests]'
-      - run: ./run.sh test
+      - run: ./run.sh coverage
 
       - uses: codecov/codecov-action@v1
         with:
