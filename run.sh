@@ -22,8 +22,12 @@ function install-dev {
 
 
 function test {
-    pytest --doctest-modules "$@"
+    pytest "$@"
 }
 
+function coverage {
+    pytest --cov
+    coverage html
+}
 
 "$@"
