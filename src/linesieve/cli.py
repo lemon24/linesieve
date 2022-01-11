@@ -271,11 +271,16 @@ def match(pattern, fixed_strings, only_matching, invert_match):
 @section_option
 def sub_paths(include, modules, modules_skip, modules_recursive):
     from glob import glob
+    from braceexpand import braceexpand
     from .paths import shorten_paths, paths_to_modules
 
-    # TODO: use braceexpand for path
+    paths = [
+        path
+        for unexpanded_pattern in include
+        for pattern in braceexpand(unexpanded_pattern)
+        for path in glob(pattern, recursive=True)
+    ]
 
-    paths = [p for g in include for p in glob(g, recursive=True)]
     replacements = shorten_paths(paths, os.sep, '...')
 
     if modules or modules_recursive or modules_skip is not None:
@@ -288,6 +293,9 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
         replacements[k] = style(v, fg='yellow')
 
     replacements = dict(sorted(replacements.items(), key=lambda p: -len(p[0])))
+
+    if not replacements:
+        return None
 
     # dead code, likely slow
 
