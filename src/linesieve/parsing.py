@@ -93,7 +93,7 @@ def annotate_lines(
     yielded_lines = False
     for line in chain(lines, [None]):
         if line is not None:
-            line = line.rstrip()
+            line = line.rstrip('\n')
 
         match = None
         label = None

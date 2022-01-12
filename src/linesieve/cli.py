@@ -1,4 +1,4 @@
-import os.path
+import os
 import re
 import subprocess
 from functools import wraps
@@ -297,19 +297,10 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     if not replacements:
         return None
 
-    # dead code, likely slow
-
-    def sub(line):
-        for old, new in replacements.items():
-            line = line.replace(old, new)
-        return line
-
-    # ...maybe this is faster? can still be improved
-    # * collapse common prefixes (maybe re.compile() already does that)
-    # * have a single pattern per run, not per sub-paths invocation
+    # FIXME: use sub-cwd-style boundaries
 
     pattern_re = re.compile(
-        '|'.join(r'\b' + re.escape(r) + r'\b' for r in replacements)
+        '|'.join(r'(^|\b)' + re.escape(r) + r'(\b|$)' for r in replacements)
     )
 
     def repl(match):
@@ -319,3 +310,36 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
         return pattern_re.sub(repl, line)
 
     return sub_paths
+
+
+@cli.command()
+@section_option
+def sub_cwd():
+    """Rougghly equivalent to `sub "$( pwd )" ''`."""
+
+    min_length = 2
+
+    cwd = os.getcwd()
+    if len(cwd.split(os.sep)) < min_length:
+        return None
+
+    # TODO: get this done in a single regex
+
+    pattern_re_zro = re.compile(
+        r'(^|(?<=[\s"\']))' + re.escape(cwd + os.sep) + r'((?=[\s"\'])|$)'
+    )
+
+    pattern_re_one = re.compile(
+        r'(^|(?<=[\s"\']))' + re.escape(cwd + os.sep) + r'(?![\s"\'])'
+    )
+    pattern_re_two = re.compile(
+        r'(^|(?<=[\s"\']))' + re.escape(cwd) + r'((?=[\s"\'])|$)'
+    )
+
+    def sub_cwd(line):
+        line = pattern_re_zro.sub('.', line)
+        line = pattern_re_one.sub('', line)
+        line = pattern_re_two.sub('.', line)
+        return line
+
+    return sub_cwd
