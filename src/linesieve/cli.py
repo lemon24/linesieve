@@ -312,10 +312,32 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     return sub_paths
 
 
+NON_PATH_CHARS = r'[\s"\':]'
+NON_PATH_START = fr"(?:^|(?<={NON_PATH_CHARS}))"
+NON_PATH_END = fr"(?:(?={NON_PATH_CHARS})|$)"
+
+
+def make_dir_path_re(*paths):
+    path = '|'.join(map(re.escape, paths))
+    sep = re.escape(os.sep)
+    return re.compile(
+        fr"""
+        {NON_PATH_START}
+        {path}
+        (?:
+            ( {sep} ? {NON_PATH_END} )
+            |
+            ( {sep} (?! {NON_PATH_CHARS} ) )
+        )
+        """,
+        re.VERBOSE,
+    )
+
+
 @cli.command()
 @section_option
 def sub_cwd():
-    """Rougghly equivalent to `sub "$( pwd )" ''`."""
+    """Roughly equivalent to `sub "$( pwd )" ''`."""
 
     min_length = 2
 
@@ -323,23 +345,13 @@ def sub_cwd():
     if len(cwd.split(os.sep)) < min_length:
         return None
 
-    # TODO: get this done in a single regex
+    pattern_re = make_dir_path_re(cwd)
 
-    pattern_re_zro = re.compile(
-        r'(^|(?<=[\s"\']))' + re.escape(cwd + os.sep) + r'((?=[\s"\'])|$)'
-    )
-
-    pattern_re_one = re.compile(
-        r'(^|(?<=[\s"\']))' + re.escape(cwd + os.sep) + r'(?![\s"\'])'
-    )
-    pattern_re_two = re.compile(
-        r'(^|(?<=[\s"\']))' + re.escape(cwd) + r'((?=[\s"\'])|$)'
-    )
+    def repl(match):
+        return '' if match.group(1) is None else '.'
 
     def sub_cwd(line):
-        line = pattern_re_zro.sub('.', line)
-        line = pattern_re_one.sub('', line)
-        line = pattern_re_two.sub('.', line)
+        line = pattern_re.sub(repl, line)
         return line
 
     return sub_cwd
