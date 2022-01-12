@@ -65,3 +65,32 @@ def test_sub_cwd(tmp_path, monkeypatch):
         {tmp_path}-yz
         """
     )
+
+
+def test_sub_link(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    dirs = "one/two/three/four"
+    dirs_path = tmp_path.joinpath(dirs)
+    dirs_path.mkdir(parents=True)
+    tmp_path.joinpath('link').symlink_to(dirs_path)
+
+    # not testing path boundaries, it's already covered in test_sub_cwd()
+
+    input = dedent(
+        f"""\
+        {tmp_path}/{dirs}
+        {tmp_path}/{dirs}/
+        {tmp_path}/{dirs}/five
+        """
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(cli, 'sub-link link', input, catch_exceptions=False)
+
+    assert result.output == dedent(
+        """\
+        link
+        link
+        link/five
+        """
+    )

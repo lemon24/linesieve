@@ -1,4 +1,5 @@
 import os.path
+import re
 
 
 def shorten_paths(paths, sep, ellipsis):
@@ -71,3 +72,25 @@ def paths_to_modules(paths, newsep='.', skip=0, recursive=False):
             modules.add(newsep.join(candidate))
 
     return modules
+
+
+NON_PATH_CHARS = r'[\s"\':]'
+NON_PATH_START = fr"(?:^|(?<={NON_PATH_CHARS}))"
+NON_PATH_END = fr"(?:(?={NON_PATH_CHARS})|$)"
+
+
+def make_dir_path_re(*paths):
+    path = '|'.join(map(re.escape, sorted(paths, key=lambda p: -len(p))))
+    sep = re.escape(os.sep)
+    return re.compile(
+        fr"""
+        {NON_PATH_START}
+        {path}
+        (?:
+            ( {sep} ? {NON_PATH_END} )
+            |
+            ( {sep} (?! {NON_PATH_CHARS} ) )
+        )
+        """,
+        re.VERBOSE,
+    )

@@ -1,4 +1,4 @@
-import os
+import os.path
 import re
 import subprocess
 from functools import wraps
@@ -95,8 +95,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     ctx.exit(returncode)
 
     # TODO:
-    # cwd replace (doable via sub, easier to do here)
-    # symlink replace (doable via sub, easier to do here)
     # (maybe) runfilter "grep pattern"
     # (maybe) sub color
     # head/tail per section
@@ -312,46 +310,55 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     return sub_paths
 
 
-NON_PATH_CHARS = r'[\s"\':]'
-NON_PATH_START = fr"(?:^|(?<={NON_PATH_CHARS}))"
-NON_PATH_END = fr"(?:(?={NON_PATH_CHARS})|$)"
-
-
-def make_dir_path_re(*paths):
-    path = '|'.join(map(re.escape, paths))
-    sep = re.escape(os.sep)
-    return re.compile(
-        fr"""
-        {NON_PATH_START}
-        {path}
-        (?:
-            ( {sep} ? {NON_PATH_END} )
-            |
-            ( {sep} (?! {NON_PATH_CHARS} ) )
-        )
-        """,
-        re.VERBOSE,
-    )
-
-
 @cli.command()
 @section_option
 def sub_cwd():
-    """Roughly equivalent to `sub "$( pwd )" ''`."""
-
+    """Roughly equivalent to `sub $( pwd ) ''`."""
     min_length = 2
 
-    cwd = os.getcwd()
-    if len(cwd.split(os.sep)) < min_length:
+    path = os.getcwd()
+    if len(path.split(os.sep)) < min_length:
         return None
 
-    pattern_re = make_dir_path_re(cwd)
+    from .paths import make_dir_path_re
+
+    pattern_re = make_dir_path_re(path)
 
     def repl(match):
         return '' if match.group(1) is None else '.'
 
     def sub_cwd(line):
-        line = pattern_re.sub(repl, line)
-        return line
+        return pattern_re.sub(repl, line)
 
     return sub_cwd
+
+
+@cli.command()
+@click.argument('link')
+@section_option
+def sub_link(link):
+    """Roughly equivalent to `sub $( realpath LINK ) LINK`."""
+    min_length = 2
+
+    try:
+        path = os.path.abspath(os.readlink(link))
+    except FileNotFoundError:
+        # TODO: retry on the first sub_link call, maybe
+        return None
+    except OSError:
+        return None
+
+    if len(path.split(os.sep)) < min_length:
+        return None
+
+    from .paths import make_dir_path_re
+
+    pattern_re = make_dir_path_re(path)
+
+    def repl(match):
+        return (link + os.sep) if match.group(1) is None else link
+
+    def sub_link(line):
+        return pattern_re.sub(repl, line)
+
+    return sub_link

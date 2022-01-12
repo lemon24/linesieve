@@ -3,6 +3,7 @@ import pytest
 from linesieve.paths import paths_to_modules
 from linesieve.paths import shorten_paths
 
+
 SHORTEN_DATA = [
     {
         'm1': 'm1',
