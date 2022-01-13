@@ -7,10 +7,6 @@ from click.testing import CliRunner
 from linesieve.cli import cli
 
 
-def pxfail(*args):
-    return pytest.param(*args, marks=pytest.mark.xfail(strict=True))
-
-
 ROOT = pathlib.Path(__file__).parent
 DATA_PATHS = sorted(ROOT.glob('data/*.in'))
 
@@ -128,21 +124,17 @@ SUB_PATHS_DATA = [
     ('--modules-skip 1', 'package.subpackage.module', '..module'),
     ('--modules-skip 1', 'package.subpackage', None),
     ('--modules-skip 1', 'test', None),
-    (
-        '--modules-skip 1',
-        'tst.test',
-        None,
-    ),
+    ('--modules-skip 1', 'tst.test', None),
     ('--modules-skip 1 --modules-recursive', 'package.subpackage.module', '..module'),
     ('--modules-skip 1 --modules-recursive', 'package.subpackage', '..subpackage'),
     ('--modules-skip 1 --modules-recursive', 'tst.test', None),
     # boundaries
     ('', ' tst/test.py', ' .../test.py'),
     ('', 'atst/test.py', 'atst/test.py'),
-    pxfail('', '-tst/test.py', '-tst/test.py'),
-    pxfail('', 'tst/test.py.gz', 'tst/test.py.gz'),
+    ('', '-tst/test.py', '-tst/test.py'),
+    ('', 'tst/test.py.gz', 'tst/test.py.gz'),
     ('', 'tst/test.pyi', 'tst/test.pyi'),
-    pxfail('', '"tst/test.py"', '"../test.py"'),
+    ('', '"tst/test.py"', '".../test.py"'),
     ('--modules', ' tst.test', ' ..test'),
     ('--modules', 'atst.test', 'atst.test'),
     ('--modules', 'tst.testz', 'tst.testz'),

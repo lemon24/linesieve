@@ -270,7 +270,7 @@ def match(pattern, fixed_strings, only_matching, invert_match):
 def sub_paths(include, modules, modules_skip, modules_recursive):
     from glob import glob
     from braceexpand import braceexpand
-    from .paths import shorten_paths, paths_to_modules
+    from .paths import shorten_paths, paths_to_modules, make_file_paths_re
 
     paths = [
         path
@@ -287,19 +287,13 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
         )
         replacements.update(shorten_paths(modules, '.', '.'))
 
-    for k, v in replacements.items():
-        replacements[k] = style(v, fg='yellow')
-
-    replacements = dict(sorted(replacements.items(), key=lambda p: -len(p[0])))
-
     if not replacements:
         return None
 
-    # FIXME: use sub-cwd-style boundaries
+    for k, v in replacements.items():
+        replacements[k] = style(v, fg='yellow')
 
-    pattern_re = re.compile(
-        '|'.join(r'(^|\b)' + re.escape(r) + r'(\b|$)' for r in replacements)
-    )
+    pattern_re = make_file_paths_re(paths, modules or ())
 
     def repl(match):
         return replacements[match.group(0)]

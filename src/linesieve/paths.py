@@ -80,12 +80,12 @@ NON_PATH_END = fr"(?:(?={NON_PATH_CHARS})|$)"
 
 
 def make_dir_path_re(*paths):
-    path = '|'.join(map(re.escape, sorted(paths, key=lambda p: -len(p))))
+    paths = sorted(paths, key=lambda p: -len(p))
     sep = re.escape(os.sep)
     return re.compile(
         fr"""
         {NON_PATH_START}
-        {path}
+        { '|'.join(map(re.escape, paths)) }
         (?:
             ( {sep} ? {NON_PATH_END} )
             |
@@ -94,3 +94,29 @@ def make_dir_path_re(*paths):
         """,
         re.VERBOSE,
     )
+
+
+def make_file_paths_re(paths, modules=()):
+    patterns = []
+
+    paths = sorted(paths, key=lambda p: -len(p))
+    if paths:
+        patterns.append(
+            fr"""
+            {NON_PATH_START}
+            (?: {'|'.join(map(re.escape, paths))} )
+            {NON_PATH_END}
+            """
+        )
+
+    modules = sorted(modules, key=lambda p: -len(p))
+    if modules:
+        patterns.append(
+            fr"""
+            (?:^|\b)
+            (?: { '|'.join(map(re.escape, modules)) } )
+            (?:\b|$)
+            """
+        )
+
+    return re.compile('\n|\n'.join(patterns), re.VERBOSE)
