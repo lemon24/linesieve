@@ -7,9 +7,11 @@ from click.testing import CliRunner
 from linesieve.cli import cli
 
 
+def pxfail(*args):
+    return pytest.param(*args, marks=pytest.mark.xfail(strict=True))
+
+
 ROOT = pathlib.Path(__file__).parent
-
-
 DATA_PATHS = sorted(ROOT.glob('data/*.in'))
 
 
@@ -69,6 +71,7 @@ def test_sub_cwd(tmp_path, monkeypatch):
 
 def test_sub_link(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+
     dirs = "one/two/three/four"
     dirs_path = tmp_path.joinpath(dirs)
     dirs_path.mkdir(parents=True)
@@ -94,3 +97,83 @@ def test_sub_link(tmp_path, monkeypatch):
         link/five
         """
     )
+
+
+SUB_PATHS = """
+src/package/subpackage/__init__.py
+src/package/subpackage/module.py
+src/package/subpackage/py.typed
+tst/test.py
+""".split()
+
+
+SUB_PATHS_DATA = [
+    ('', path, None)
+    for path in """
+        src/package
+        src/package/none.py
+        src/package/subpackage
+        src/package/subpackage/py.typed
+        package.subpackage.module
+        src.package.subpackage.module
+        tst.test
+    """.split()
+] + [
+    ('', 'src/package/subpackage/module.py', '.../module.py'),
+    ('', 'tst/test.py', '.../test.py'),
+    ('--modules', 'package.subpackage.module', None),
+    ('--modules', 'src.package.subpackage', None),
+    ('--modules', 'src.package.subpackage.module', '..module'),
+    ('--modules', 'tst.test', '..test'),
+    ('--modules-skip 1', 'package.subpackage.module', '..module'),
+    ('--modules-skip 1', 'package.subpackage', None),
+    ('--modules-skip 1', 'test', None),
+    (
+        '--modules-skip 1',
+        'tst.test',
+        None,
+    ),
+    ('--modules-skip 1 --modules-recursive', 'package.subpackage.module', '..module'),
+    ('--modules-skip 1 --modules-recursive', 'package.subpackage', '..subpackage'),
+    ('--modules-skip 1 --modules-recursive', 'tst.test', None),
+    # boundaries
+    ('', ' tst/test.py', ' .../test.py'),
+    ('', 'atst/test.py', 'atst/test.py'),
+    pxfail('', '-tst/test.py', '-tst/test.py'),
+    pxfail('', 'tst/test.py.gz', 'tst/test.py.gz'),
+    ('', 'tst/test.pyi', 'tst/test.pyi'),
+    pxfail('', '"tst/test.py"', '"../test.py"'),
+    ('--modules', ' tst.test', ' ..test'),
+    ('--modules', 'atst.test', 'atst.test'),
+    ('--modules', 'tst.testz', 'tst.testz'),
+    ('--modules', '-tst.test', '-..test'),
+    ('--modules', 'tst.test-', '..test-'),
+    ('--modules', '_tst.test', '_tst.test'),
+    ('--modules', 'tst.test_', 'tst.test_'),
+    ('--modules', '"tst.test"', '"..test"'),
+    ('--modules', 'nope.tst.test', 'nope...test'),
+    ('--modules', 'tst.test.nope', '..test.nope'),
+]
+
+
+@pytest.mark.parametrize('options, input, output', SUB_PATHS_DATA)
+def test_sub_paths(tmp_path, monkeypatch, options, input, output):
+    monkeypatch.chdir(tmp_path)
+
+    for path in SUB_PATHS:
+        path = tmp_path.joinpath(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        "sub-paths --include '{src,tst}/**/*.py' " + options,
+        input,
+        catch_exceptions=False,
+    )
+
+    if output is None:
+        output = input
+
+    assert result.output.rstrip('\n') == output
