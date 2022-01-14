@@ -7,13 +7,37 @@ import click
 from click import echo
 from click import style
 
+import linesieve
 from .parsing import make_pipeline
 
 
-@click.group(chain=True, invoke_without_command=True)
-@click.option('-s', '--section', metavar='PATTERN')
-@click.option('--success', metavar='PATTERN')
-@click.option('--failure', metavar='PATTERN')
+def color_help(text):
+
+    KWARGS = {
+        'd': dict(dim=True),
+        'r': dict(fg='red'),
+        'g': dict(fg='green'),
+        'y': dict(fg='yellow'),
+    }
+
+    def repl(match):
+        options, line = match.groups()
+        kwargs = {}
+        for option in options:
+            if option == '\b':
+                continue
+            kwargs.update(KWARGS[option])
+        return style(line, **kwargs)
+
+    return re.sub('([drgy]\b)(.*)', repl, text)
+
+
+@click.group(
+    chain=True, invoke_without_command=True, help=color_help(linesieve.__doc__)
+)
+@click.option('-s', '--section', metavar='PATTERN', help="Section marker.")
+@click.option('--success', metavar='PATTERN', help="Success marker.")
+@click.option('--failure', metavar='PATTERN', help="Failure marker.")
 @click.pass_context
 def cli(ctx, **kwargs):
     # options reserved for future expansion:
@@ -94,13 +118,16 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
-    # TODO:
-    # (maybe) runfilter "grep pattern"
-    # (maybe) sub color
-    # head/tail per section
-    # match -e pattern -e pattern (hard to do with click)
+    # TODO before 1.0:
+    # cli help texts
     # section, failure, success to stdout, not err
-    # cli (polish; short command aliases)
+    # rename show to include (?)
+    # TODO after 1.0:
+    # runfilter "grep pattern"
+    # sub color
+    # head/tail per section
+    # match -e pattern -e pattern (hard to do with click while keeping arg)
+    # short command aliases (four-letter ones)
 
 
 def output_sections(groups, section_dot='.'):
@@ -155,6 +182,7 @@ def output_sections(groups, section_dot='.'):
 @click.argument('file', type=click.File('r', lazy=True))
 @click.pass_obj
 def open(obj, file):
+    """Roughly equivalent to: cat FILE | linesieve ..."""
     assert not obj.get('file')
     obj['file'] = file
 
@@ -164,6 +192,7 @@ def open(obj, file):
 @click.argument('argument', nargs=-1)
 @click.pass_obj
 def exec(obj, command, argument):
+    """Roughly equivalent to: COMMAND | linesieve ..."""
     assert not obj.get('file')
     process = subprocess.Popen(
         (command,) + argument,
@@ -176,8 +205,15 @@ def exec(obj, command, argument):
 
 
 def pattern_argument(fn):
-    @click.option('-F', '--fixed-strings', is_flag=True)
-    @click.option('-i', '--ignore-case', is_flag=True)
+    @click.option(
+        '-F',
+        '--fixed-strings',
+        is_flag=True,
+        help="Interpret the pattern as a fixed string.",
+    )
+    @click.option(
+        '-i', '--ignore-case', is_flag=True, help="Perform case-insensitive matching."
+    )
     @click.argument('PATTERN')
     @wraps(fn)
     def wrapper(*args, pattern, fixed_strings, ignore_case, **kwargs):
@@ -199,11 +235,19 @@ def pattern_argument(fn):
 @pattern_argument
 @click.pass_obj
 def show(obj, pattern, fixed_strings):
+    """...
+
+    ^$ matches the zeroth section (the one before the first named section).
+    $none matches no section."
+
+    """
     obj.setdefault('show', []).append(pattern)
 
 
 def section_option(fn):
-    @click.option('-s', '--section', metavar='PATTERN')
+    @click.option(
+        '-s', '--section', metavar='PATTERN', help="Apply only to matching sections."
+    )
     @wraps(fn)
     def wrapper(*args, section, **kwargs):
         rv = fn(*args, **kwargs)
@@ -223,6 +267,7 @@ def section_option(fn):
 )
 @section_option
 def sub(pattern, repl, fixed_strings, only_matching):
+    """Roughly equivalent to: sed 's/PATTERN/REPL/g'"""
     if fixed_strings:
         repl = repl.replace('\\', r'\\')
 
@@ -241,11 +286,18 @@ def sub(pattern, repl, fixed_strings, only_matching):
     '-o',
     '--only-matching',
     is_flag=True,
-    help="Prints only the matching part of the lines.",
+    help="Print only the matching part of the lines.",
 )
-@click.option('-v', '--invert-match', is_flag=True)
+@click.option(
+    '-v',
+    '--invert-match',
+    is_flag=True,
+    help="Select lines *not* matching the pattern.",
+)
 @section_option
 def match(pattern, fixed_strings, only_matching, invert_match):
+    """Roughly equivalent to: grep PATTERN"""
+
     def search(line):
         if not only_matching:
             if bool(pattern.search(line)) is not invert_match:
@@ -307,7 +359,7 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
 @cli.command()
 @section_option
 def sub_cwd():
-    """Roughly equivalent to `sub $( pwd ) ''`."""
+    """Roughly equivalent to: sub $( pwd ) ''"""
     min_length = 2
 
     path = os.getcwd()
@@ -331,7 +383,7 @@ def sub_cwd():
 @click.argument('link')
 @section_option
 def sub_link(link):
-    """Roughly equivalent to `sub $( realpath LINK ) LINK`."""
+    """Roughly equivalent to: sub $( realpath LINK ) LINK"""
     min_length = 2
 
     try:

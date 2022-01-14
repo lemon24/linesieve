@@ -1,0 +1,6 @@
+--section '(\S+):$' show '^$'
+0
+one:
+1
+two:
+2
