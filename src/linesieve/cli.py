@@ -108,14 +108,14 @@ def process_pipeline(ctx, processors, section, success, failure):
             returncode = 1
 
     if message:
-        echo(message, err=True)
+        echo(message, err=status not in {True, False})
 
     if process:
         process.wait()
         returncode = process.returncode
         if not message:
             message = style(
-                f"command returned exit code {style(str(returncode), bold=True)}",
+                f"exited with status code {style(str(returncode), bold=True)}",
                 fg=('green' if returncode == 0 else 'red'),
             )
         else:
@@ -138,9 +138,6 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
-    # TODO before 1.0:
-    # section, failure, success to stdout, not err
-    # rename show to include (?)
     # TODO after 1.0:
     # runfilter "grep pattern"
     # sub color
@@ -182,7 +179,7 @@ def output_sections(groups, section_dot='.'):
             return section, prev_section
 
         if section:
-            echo(style(section, dim=True), err=True)
+            echo(style(section, dim=True, bold=True))
 
         line = next(lines, None)
         if line:

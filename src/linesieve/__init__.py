@@ -22,7 +22,7 @@ Example:
 
 \b
   $ cat file.txt | linesieve --section '(\\S+):$' --failure fail \\
-  > include --ignore-case ^O \\
+  > show --ignore-case ^O \\
   > match --section one --only-matching '\\d+' \\
   > sub '([a-z])' '\\1\\1\\1'
   d\bone
@@ -34,4 +34,4 @@ Example:
 
 """
 
-__version__ = '1.0a4'
+__version__ = '1.0a5'
