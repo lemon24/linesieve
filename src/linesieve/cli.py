@@ -35,9 +35,29 @@ def color_help(text):
 @click.group(
     chain=True, invoke_without_command=True, help=color_help(linesieve.__doc__)
 )
-@click.option('-s', '--section', metavar='PATTERN', help="Section marker.")
-@click.option('--success', metavar='PATTERN', help="Success marker.")
-@click.option('--failure', metavar='PATTERN', help="Failure marker.")
+@click.option(
+    '-s',
+    '--section',
+    metavar='PATTERN',
+    help="""
+    Consider matching lines the start of a new section.
+    The section name is one of: the named group 'name',
+    the first captured group, the entire match.
+    """,
+)
+@click.option(
+    '--success',
+    metavar='PATTERN',
+    help="If matched, exit with a status code indicating success.",
+)
+@click.option(
+    '--failure',
+    metavar='PATTERN',
+    help="""
+    If matched, exit with a status code indicating failure.
+    Before exiting, output the last section if it wasn't already.
+    """,
+)
 @click.pass_context
 def cli(ctx, **kwargs):
     # options reserved for future expansion:
@@ -119,7 +139,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     ctx.exit(returncode)
 
     # TODO before 1.0:
-    # cli help texts
     # section, failure, success to stdout, not err
     # rename show to include (?)
     # TODO after 1.0:
@@ -178,21 +197,25 @@ def output_sections(groups, section_dot='.'):
         prev_section = section
 
 
-@cli.command()
+@cli.command(short_help="cat FILE | linesieve")
 @click.argument('file', type=click.File('r', lazy=True))
 @click.pass_obj
 def open(obj, file):
-    """Roughly equivalent to: cat FILE | linesieve ..."""
+    """Read input from FILE instead of standard input."""
     assert not obj.get('file')
     obj['file'] = file
 
 
-@cli.command()
+@cli.command(short_help="COMMAND | linesieve")
 @click.argument('command')
 @click.argument('argument', nargs=-1)
 @click.pass_obj
 def exec(obj, command, argument):
-    """Roughly equivalent to: COMMAND | linesieve ..."""
+    """Execute COMMAND and use its output as input.
+
+    If the command finishes, exit with its status code.
+
+    """
     assert not obj.get('file')
     process = subprocess.Popen(
         (command,) + argument,
@@ -235,10 +258,10 @@ def pattern_argument(fn):
 @pattern_argument
 @click.pass_obj
 def show(obj, pattern, fixed_strings):
-    """...
+    """Output only sections matching PATTERN.
 
-    ^$ matches the zeroth section (the one before the first named section).
-    $none matches no section."
+    '^$' matches the lines before the first section.
+    '$none' matches no section.
 
     """
     obj.setdefault('show', []).append(pattern)
@@ -259,15 +282,17 @@ def section_option(fn):
     return wrapper
 
 
-@cli.command()
+@cli.command(short_help="sed 's/PATTERN/REPL/g'")
 @pattern_argument
 @click.argument('repl')
-@click.option(
-    '-o', '--only-matching', is_flag=True, help="Print only lines that match PATTERN."
-)
+@click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
 @section_option
 def sub(pattern, repl, fixed_strings, only_matching):
-    """Roughly equivalent to: sed 's/PATTERN/REPL/g'"""
+    """Replace PATTERN matches with REPL.
+
+    Works like re.sub() in Python.
+
+    """
     if fixed_strings:
         repl = repl.replace('\\', r'\\')
 
@@ -280,23 +305,33 @@ def sub(pattern, repl, fixed_strings, only_matching):
     return sub
 
 
-@cli.command()
+@cli.command(short_help="grep PATTERN")
 @pattern_argument
 @click.option(
     '-o',
     '--only-matching',
     is_flag=True,
-    help="Print only the matching part of the lines.",
+    help="""
+    Output only the matching part of the line, one match per line.
+    Works like re.findall() in Python:
+    if there are no groups, output the entire match;
+    if there is one group, output the group;
+    if there are multiple groups, output all of them, separated by tabs.
+    """,
 )
 @click.option(
     '-v',
     '--invert-match',
     is_flag=True,
-    help="Select lines *not* matching the pattern.",
+    help="Output only lines *not* matching the pattern.",
 )
 @section_option
 def match(pattern, fixed_strings, only_matching, invert_match):
-    """Roughly equivalent to: grep PATTERN"""
+    """Output only lines matching PATTERN.
+
+    Works like re.search() in Python.
+
+    """
 
     def search(line):
         if not only_matching:
@@ -314,12 +349,67 @@ def match(pattern, fixed_strings, only_matching, invert_match):
 
 
 @cli.command()
-@click.option('--include', multiple=True, metavar='GLOB')
-@click.option('--modules', is_flag=True)
-@click.option('--modules-skip', type=click.IntRange(0))
-@click.option('--modules-recursive', is_flag=True)
+@click.option(
+    '--include',
+    multiple=True,
+    metavar='GLOB',
+    help="""
+    Replace the paths of existing files matching this pattern.
+    Both recursive globs and brace expansion are supported, e.g.
+    {src,tests}/**/*.py.
+    """,
+)
+@click.option('--modules', is_flag=True, help="Also replaced dotted module names.")
+@click.option(
+    '--modules-skip',
+    type=click.IntRange(0),
+    metavar='INTEGER',
+    help="Path levels to skip to obtain module names from paths. Implies --modules.",
+)
+@click.option(
+    '--modules-recursive',
+    is_flag=True,
+    help="""
+    Consider the parent directories of selected files to be modules too.
+    Implies --modules.
+    """,
+)
 @section_option
 def sub_paths(include, modules, modules_skip, modules_recursive):
+    """Replace paths of existing files with shorter versions.
+
+    The replacement paths are still unique.
+
+    For example, given these files are selected:
+
+    \b
+      src/one/mod1.py
+      src/one/two/mod2.py
+      tests/test.py
+
+    Their paths will be replaced with:
+
+    \b
+      .../mod1.py
+      .../mod2.py
+      .../test.py
+
+    Dotted module names derived from the selected files can also be shortened.
+    For example, with --modules-skip 1 --modules-recursive, these modules:
+
+    \b
+      one.mod1
+      one.two.mod2
+      one.two
+
+    Will be replaced with:
+
+    \b
+      ..mod1
+      ..mod2
+      ..two
+
+    """
     from glob import glob
     from braceexpand import braceexpand
     from .paths import shorten_paths, paths_to_modules, make_file_paths_re
@@ -356,10 +446,10 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     return sub_paths
 
 
-@cli.command()
+@cli.command(short_help="sub $( pwd ) ''")
 @section_option
 def sub_cwd():
-    """Roughly equivalent to: sub $( pwd ) ''"""
+    """Make paths in the working directory relative."""
     min_length = 2
 
     path = os.getcwd()
@@ -379,11 +469,11 @@ def sub_cwd():
     return sub_cwd
 
 
-@cli.command()
+@cli.command(short_help="sub $( realpath LINK ) LINK")
 @click.argument('link')
 @section_option
 def sub_link(link):
-    """Roughly equivalent to: sub $( realpath LINK ) LINK"""
+    """Replace the target of symlink LINK with LINK."""
     min_length = 2
 
     try:
@@ -408,3 +498,7 @@ def sub_link(link):
         return pattern_re.sub(repl, line)
 
     return sub_link
+
+
+for command in cli.commands.values():
+    command.short_help = None

@@ -1,31 +1,11 @@
 """
-An unholy blend of grep, sed, and awk, with very specific features.
+Read standard input, process it, and write to standard output.
 
-Split input into sections; show:
+Split input into sections, and output selected sections.
+Filter output lines, globally or per-section.
+Compress runs of blank lines.
 
-\b
-* all sections (default)
-* specific sections (see the include sub-command)
-* failing section (if --failure was given)
-
-Stop on success/failure.
-
-Show dots for hidden sections to indicate progress.
-
-Color section and success/failure markers.
-
-Filter lines in (specific) sections by chaining sub-commands.
-
-Deduplicate blank lines.
-
-All patterns are full Python regular expressions.
-
-The section and end markers are shortened to:
-
-\b
-* the group named 'name', if any
-* the first captured group, if any
-* the entire match, otherwise
+All patterns use the Python regular expression syntax.
 
 Example:
 
@@ -41,15 +21,15 @@ Example:
   fail
 
 \b
-  $ cat file.txt | linesieve -s '(\\S+):$' --failure fail \\
-  > show one \\
-  > match -s one -o '\\d+' \\
-  > sub th þ
+  $ cat file.txt | linesieve --section '(\\S+):$' --failure fail \\
+  > include --ignore-case ^O \\
+  > match --section one --only-matching '\\d+' \\
+  > sub '([a-z])' '\\1\\1\\1'
   d\bone
   1
   d\b..
   d\bthree
-  3, þree
+  3, ttthhhrrreeeeee
   r\bfail
 
 """
