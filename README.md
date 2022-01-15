@@ -27,7 +27,7 @@ Note that some of the man pages contain multiple OPTIONS sections (e.g. ADVANCED
 export MANWIDTH=9999
 
 function man-section {
-    col -b | python3 -m linesieve -s '^[A-Z ()-]+$' show "$@"
+    col -b | linesieve -s '^[A-Z ()-]+$' show "$@"
 }
 
 man git \
