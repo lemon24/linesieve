@@ -1,4 +1,5 @@
 import pathlib
+import shlex
 from textwrap import dedent
 
 import pytest
@@ -8,19 +9,33 @@ from linesieve.cli import cli
 
 
 ROOT = pathlib.Path(__file__).parent
-DATA_PATHS = sorted(ROOT.glob('data/*.in'))
 
 
-@pytest.fixture(params=DATA_PATHS, ids=lambda p: p.name)
-def data(request):
-    inp = request.param
-    outp = inp.with_suffix('.out')
-    with inp.open() as inf, outp.open() as outf:
-        return next(inf).rstrip(), inf.read(), outf.read()
+def load_data(root):
+    for path in sorted(root.glob('data/*.in')):
+        with path.open() as f:
+            args = shlex.split(next(f).rstrip())
+            input = f.read()
+        with path.with_suffix('.out').open() as f:
+            output = f.read()
+
+        yield path.name, (args, input, output)
+
+        args_with_color = []
+        for arg in args:
+            args_with_color.append(arg)
+            if arg in {'sub', 'match'}:
+                args_with_color.append('--color')
+
+        if args_with_color != args:
+            yield path.name + '--color', (args_with_color, input, output)
 
 
-def test_data(data):
-    args, input, output = data
+DATA = dict(load_data(ROOT))
+
+
+@pytest.mark.parametrize('args, input, output', list(DATA.values()), ids=list(DATA))
+def test_data(args, input, output):
     runner = CliRunner()
     result = runner.invoke(cli, args, input, catch_exceptions=False)
     assert result.output == output

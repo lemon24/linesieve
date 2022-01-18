@@ -214,7 +214,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     # match replace spans of skipped lines with ...
     # collapse any repeated lines
     # runfilter "grep pattern"
-    # sub color
     # head/tail per section
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
@@ -363,8 +362,9 @@ def section_option(fn):
 @pattern_argument
 @click.argument('repl')
 @click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
+@click.option('--color', is_flag=True, help="Color replacements.")
 @section_option
-def sub(pattern, repl, fixed_strings, only_matching):
+def sub(pattern, repl, fixed_strings, only_matching, color):
     """Replace PATTERN matches with REPL.
 
     Roughly equivalent to: sed 's/PATTERN/REPL/g'
@@ -374,6 +374,8 @@ def sub(pattern, repl, fixed_strings, only_matching):
     """
     if fixed_strings:
         repl = repl.replace('\\', r'\\')
+    if color:
+        repl = style(repl, fg='red')
 
     def sub(line):
         line, subn = pattern.subn(repl, line)
@@ -404,8 +406,10 @@ def sub(pattern, repl, fixed_strings, only_matching):
     is_flag=True,
     help="Output only lines *not* matching the pattern.",
 )
+@click.option('--color', is_flag=True, help="Color matches.")
 @section_option
-def match(pattern, fixed_strings, only_matching, invert_match):
+@click.pass_context
+def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
     """Output only lines matching PATTERN.
 
     Roughly equivalent to: grep PATTERN
@@ -413,6 +417,17 @@ def match(pattern, fixed_strings, only_matching, invert_match):
     Works like re.search() in Python.
 
     """
+
+    if color and not invert_match and not only_matching:
+        return ctx.invoke(
+            sub,
+            pattern=pattern,
+            repl=r'\g<0>',
+            # pattern is already escaped
+            fixed_strings=False,
+            only_matching=True,
+            color=color,
+        )[1]
 
     def search(line):
         if not only_matching:
@@ -422,8 +437,13 @@ def match(pattern, fixed_strings, only_matching, invert_match):
         else:
             matches = pattern.findall(line)
             if matches:
-                matches = [m if isinstance(m, str) else '\t'.join(m) for m in matches]
-                return '\n'.join(matches)
+                lines = []
+                for match in matches:
+                    groups = (match,) if isinstance(match, str) else match
+                    if color:
+                        groups = [style(g, fg='red') for g in groups]
+                    lines.append('\t'.join(groups))
+                return '\n'.join(lines)
             return None
 
     return search
