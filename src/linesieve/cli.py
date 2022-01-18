@@ -32,8 +32,69 @@ def color_help(text):
     return re.sub('([drgy]\b)(.*)', repl, text)
 
 
+def full_help_option(fn):
+    fn = click.help_option()(fn)
+
+    (param,) = [p for p in fn.__click_params__ if p.name == 'help']
+    param.count = True
+    param.is_flag = False
+    param.type = click.INT
+    param.help += " Pass twice to show help for all commands."
+
+    original_callback = param.callback
+
+    def callback(ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+
+        if value <= 1:
+            original_callback(ctx, param, value)
+
+        formatter = ctx.make_formatter()
+        commands = list_commands_recursive(ctx.command, ctx)
+
+        for path, command in commands:
+            title = style(path.upper(), bold=True)
+            if command.short_help:
+                title += style(' - ' + command.short_help, dim=True)
+
+            formatter.write(title + '\n\n  ')
+
+            with formatter.indentation():
+                if command is ctx.command:
+                    format_ctx = ctx
+                else:
+                    format_ctx = type(ctx)(command, ctx, command.name)
+                command.format_help(format_ctx, formatter)
+
+            formatter.write('\n')
+
+        click.echo_via_pager(formatter.getvalue(), color=ctx.color)
+        ctx.exit()
+
+    param.callback = callback
+    return fn
+
+
+def list_commands_recursive(self, ctx, path=()):
+    path = path + (self.name,)
+    yield ' '.join(path), self
+    if not hasattr(self, 'list_commands'):
+        return
+    for subcommand in self.list_commands(ctx):
+        cmd = self.get_command(ctx, subcommand)
+        if cmd is None:
+            continue
+        if cmd.hidden:
+            continue
+        yield from list_commands_recursive(cmd, ctx, path)
+
+
 @click.group(
-    chain=True, invoke_without_command=True, help=color_help(linesieve.__doc__)
+    name='linesieve',
+    chain=True,
+    invoke_without_command=True,
+    help=color_help(linesieve.__doc__),
 )
 @click.option(
     '-s',
@@ -58,6 +119,7 @@ def color_help(text):
     Before exiting, output the last section if it wasn't already.
     """,
 )
+@full_help_option
 @click.pass_context
 def cli(ctx, **kwargs):
     # options reserved for future expansion:
@@ -138,7 +200,12 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
+    # print last section without --failure if exec exits with non-zero (how?)
+    # hide section
     # TODO after 1.0:
+    # exec time
+    # match replace spans of skipped lines with ...
+    # collapse any repeated lines
     # runfilter "grep pattern"
     # sub color
     # head/tail per section
@@ -495,7 +562,3 @@ def sub_link(link):
         return pattern_re.sub(repl, line)
 
     return sub_link
-
-
-for command in cli.commands.values():
-    command.short_help = None
