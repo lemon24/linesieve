@@ -51,12 +51,18 @@ def full_help_option(fn):
             original_callback(ctx, param, value)
 
         formatter = ctx.make_formatter()
+        formatter.indent_increment
         commands = list_commands_recursive(ctx.command, ctx)
 
         for path, command in commands:
             title = style(path.upper(), bold=True)
             if command.short_help:
-                title += style(' - ' + command.short_help, dim=True)
+                short = command.short_help
+                first = short.partition(' ')[0]
+                if first.istitle():
+                    short = first.lower() + short[len(first) :]
+                short = short.rstrip('.')
+                title += style(' - ' + short, dim=True)
 
             formatter.write(title + '\n\n  ')
 
@@ -95,6 +101,7 @@ def list_commands_recursive(self, ctx, path=()):
     chain=True,
     invoke_without_command=True,
     help=color_help(linesieve.__doc__),
+    short_help="An unholy blend of grep, sed, and awk, with very specific features.",
 )
 @click.option(
     '-s',
@@ -261,21 +268,27 @@ def output_sections(groups, section_dot='.'):
         prev_section = section
 
 
-@cli.command(short_help="cat FILE | linesieve")
+@cli.command(short_help="Read input from file.")
 @click.argument('file', type=click.File('r', lazy=True))
 @click.pass_obj
 def open(obj, file):
-    """Read input from FILE instead of standard input."""
+    """Read input from FILE instead of standard input.
+
+    Roughly equivalent to: cat FILE | linesieve
+
+    """
     assert not obj.get('file')
     obj['file'] = file
 
 
-@cli.command(short_help="COMMAND | linesieve")
+@cli.command(short_help="Read input from command.")
 @click.argument('command')
 @click.argument('argument', nargs=-1)
 @click.pass_obj
 def exec(obj, command, argument):
     """Execute COMMAND and use its output as input.
+
+    Roughly equivalent to: COMMAND | linesieve
 
     If the command finishes, exit with its status code.
 
@@ -318,7 +331,7 @@ def pattern_argument(fn):
     return wrapper
 
 
-@cli.command()
+@cli.command(short_help="Show selected sections.")
 @pattern_argument
 @click.pass_obj
 def show(obj, pattern, fixed_strings):
@@ -346,13 +359,15 @@ def section_option(fn):
     return wrapper
 
 
-@cli.command(short_help="sed 's/PATTERN/REPL/g'")
+@cli.command(short_help="Replace pattern.")
 @pattern_argument
 @click.argument('repl')
 @click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
 @section_option
 def sub(pattern, repl, fixed_strings, only_matching):
     """Replace PATTERN matches with REPL.
+
+    Roughly equivalent to: sed 's/PATTERN/REPL/g'
 
     Works like re.sub() in Python.
 
@@ -369,7 +384,7 @@ def sub(pattern, repl, fixed_strings, only_matching):
     return sub
 
 
-@cli.command(short_help="grep PATTERN")
+@cli.command(short_help="Search for pattern.")
 @pattern_argument
 @click.option(
     '-o',
@@ -393,6 +408,8 @@ def sub(pattern, repl, fixed_strings, only_matching):
 def match(pattern, fixed_strings, only_matching, invert_match):
     """Output only lines matching PATTERN.
 
+    Roughly equivalent to: grep PATTERN
+
     Works like re.search() in Python.
 
     """
@@ -412,7 +429,7 @@ def match(pattern, fixed_strings, only_matching, invert_match):
     return search
 
 
-@cli.command()
+@cli.command(short_help="Shorten paths of existing files.")
 @click.option(
     '--include',
     multiple=True,
@@ -510,10 +527,14 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     return sub_paths
 
 
-@cli.command(short_help="sub $( pwd ) ''")
+@cli.command(short_help="Make working directory paths relative.")
 @section_option
 def sub_cwd():
-    """Make paths in the working directory relative."""
+    """Make paths in the working directory relative.
+
+    Roughly equivalent to: sub $( pwd ) ''
+
+    """
     min_length = 2
 
     path = os.getcwd()
@@ -533,11 +554,15 @@ def sub_cwd():
     return sub_cwd
 
 
-@cli.command(short_help="sub $( realpath LINK ) LINK")
+@cli.command(short_help="Replace symlink targets.")
 @click.argument('link')
 @section_option
 def sub_link(link):
-    """Replace the target of symlink LINK with LINK."""
+    """Replace the target of symlink LINK with LINK.
+
+    Roughly equivalent to: sub $( realpath LINK ) LINK
+
+    """
     min_length = 2
 
     try:
