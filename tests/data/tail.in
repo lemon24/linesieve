@@ -1,0 +1,22 @@
+--section '(\S+):$' tail -s aaa -n1 tail -s bbb -n+2 tail -s ccc -n-1 tail -s ddd -n0
+aaa:
+1a
+2a
+3a
+4a
+5a
+bbb:
+1b
+2b
+3b
+4b
+5b
+ccc:
+1c
+2c
+3c
+4c
+5c
+ddd:
+1d
+2d

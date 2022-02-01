@@ -221,8 +221,15 @@ def filter_lines(groups, get_filters):
     for section, lines in groups:
         if section not in {True, False, None}:
             filters = get_filters(section)
-            if filters:
-                lines = filter_lines(lines, filters)
+            grouped = groupby(filters, key=lambda f: getattr(f, 'is_iter', False))
+
+            for is_iter, group in grouped:
+                if is_iter:
+                    for filter in filters:
+                        lines = filter(lines)
+                else:
+                    lines = filter_lines(lines, list(group))
+
         yield section, lines
 
 

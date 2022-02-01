@@ -209,7 +209,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     # match replace spans of skipped lines with ...
     # collapse any repeated lines
     # runfilter "grep pattern"
-    # head/tail per section
     # cut
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
@@ -603,3 +602,77 @@ def sub_link(link):
         return pattern_re.sub(repl, line)
 
     return sub_link
+
+
+@cli.command(short_help="Output the first part of sections.")
+@click.option(
+    '-n',
+    'count',
+    metavar="COUNT",
+    type=int,
+    default=10,
+    show_default=True,
+    help="Print the first COUNT lines. "
+    "With a leading '-', print all but the last COUNT lines.",
+)
+@section_option
+def head(count):
+    """Print the first COUNT lines.
+
+    Roughly equivalent to: head -n COUNT
+
+    """
+    from itertools import islice
+
+    def head(lines):
+        if count >= 0:
+            return islice(lines, count)
+        else:
+            # TODO: don't read in memory, use a temporary file
+            return iter(list(lines)[0:count])
+
+    head.is_iter = True
+    return head
+
+
+def tail_count_int(value):
+    value = value.strip()
+    if value.startswith('+'):
+        rv = int(value) - 1
+    elif value.startswith('-'):
+        rv = int(value)
+    else:
+        rv = -int(value)
+    return rv
+
+
+@cli.command(short_help="Output the last part of sections.")
+@click.option(
+    '-n',
+    'count',
+    metavar="COUNT",
+    type=tail_count_int,
+    default=10,
+    show_default=True,
+    help="Print the last COUNT lines. "
+    "With a leading '+', print lines starting with line COUNT.",
+)
+@section_option
+def tail(count):
+    """Print the last COUNT lines.
+
+    Roughly equivalent to: tail -n COUNT
+
+    """
+    from itertools import islice
+    from collections import deque
+
+    def tail(lines):
+        if count <= 0:
+            # TODO: don't read in memory, use a temporary file
+            return iter(deque(lines, maxlen=-count))
+        else:
+            return islice(lines, count, None)
+
+    tail.is_iter = True
+    return tail
