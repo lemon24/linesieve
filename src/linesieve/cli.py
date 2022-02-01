@@ -32,54 +32,48 @@ def color_help(text):
     return re.sub('([drgy]\b)(.*)', repl, text)
 
 
-def full_help_option(fn):
-    fn = click.help_option()(fn)
+def help_all_option():
+    return click.option(
+        "--help-all",
+        is_flag=True,
+        expose_value=False,
+        is_eager=True,
+        help="Show help for all commands and exit.",
+        callback=help_all_callback,
+    )
 
-    (param,) = [p for p in fn.__click_params__ if p.name == 'help']
-    param.count = True
-    param.is_flag = False
-    param.type = click.INT
-    param.help += " Pass twice to show help for all commands."
 
-    original_callback = param.callback
+def help_all_callback(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
 
-    def callback(ctx, param, value):
-        if not value or ctx.resilient_parsing:
-            return
+    formatter = ctx.make_formatter()
+    formatter.indent_increment
+    commands = list_commands_recursive(ctx.command, ctx)
 
-        if value <= 1:
-            original_callback(ctx, param, value)
+    for path, command in commands:
+        title = style(path.upper(), bold=True)
+        if command.short_help:
+            short = command.short_help
+            first = short.partition(' ')[0]
+            if first.istitle():
+                short = first.lower() + short[len(first) :]
+            short = short.rstrip('.')
+            title += style(' - ' + short, dim=True)
 
-        formatter = ctx.make_formatter()
-        formatter.indent_increment
-        commands = list_commands_recursive(ctx.command, ctx)
+        formatter.write(title + '\n\n  ')
 
-        for path, command in commands:
-            title = style(path.upper(), bold=True)
-            if command.short_help:
-                short = command.short_help
-                first = short.partition(' ')[0]
-                if first.istitle():
-                    short = first.lower() + short[len(first) :]
-                short = short.rstrip('.')
-                title += style(' - ' + short, dim=True)
+        with formatter.indentation():
+            if command is ctx.command:
+                format_ctx = ctx
+            else:
+                format_ctx = type(ctx)(command, ctx, command.name)
+            command.format_help(format_ctx, formatter)
 
-            formatter.write(title + '\n\n  ')
+        formatter.write('\n')
 
-            with formatter.indentation():
-                if command is ctx.command:
-                    format_ctx = ctx
-                else:
-                    format_ctx = type(ctx)(command, ctx, command.name)
-                command.format_help(format_ctx, formatter)
-
-            formatter.write('\n')
-
-        click.echo_via_pager(formatter.getvalue(), color=ctx.color)
-        ctx.exit()
-
-    param.callback = callback
-    return fn
+    click.echo_via_pager(formatter.getvalue(), color=ctx.color)
+    ctx.exit()
 
 
 def list_commands_recursive(self, ctx, path=()):
@@ -126,7 +120,7 @@ def list_commands_recursive(self, ctx, path=()):
     Before exiting, output the last section if it wasn't already.
     """,
 )
-@full_help_option
+@help_all_option()
 @click.pass_context
 def cli(ctx, **kwargs):
     # options reserved for future expansion:
@@ -207,14 +201,16 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
+    # TODO after 1.0:
+    # hide lines in section after pattern
     # print last section without --failure if exec exits with non-zero (how?)
     # hide section
-    # TODO after 1.0:
     # exec time
     # match replace spans of skipped lines with ...
     # collapse any repeated lines
     # runfilter "grep pattern"
     # head/tail per section
+    # cut
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
 
