@@ -209,9 +209,9 @@ def process_pipeline(ctx, processors, section, success, failure):
     # match replace spans of skipped lines with ...
     # collapse any repeated lines
     # runfilter "grep pattern"
-    # cut
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
+    # make dedupe_blank_lines optional
 
 
 def output_sections(groups, section_dot='.'):
@@ -311,18 +311,25 @@ def pattern_argument(fn):
     @click.argument('PATTERN')
     @wraps(fn)
     def wrapper(*args, pattern, fixed_strings, ignore_case, **kwargs):
-        if fixed_strings:
-            pattern = re.escape(pattern)
-
-        flags = 0
-        if ignore_case:
-            flags |= re.IGNORECASE
-
-        pattern_re = re.compile(pattern, flags)
-
-        return fn(*args, pattern=pattern_re, fixed_strings=fixed_strings, **kwargs)
+        return fn(
+            *args,
+            pattern=compile_pattern(pattern, fixed_strings, ignore_case),
+            fixed_strings=fixed_strings,
+            **kwargs,
+        )
 
     return wrapper
+
+
+def compile_pattern(pattern, fixed_strings, ignore_case):
+    if fixed_strings:
+        pattern = re.escape(pattern)
+
+    flags = 0
+    if ignore_case:
+        flags |= re.IGNORECASE
+
+    return re.compile(pattern, flags)
 
 
 @cli.command(short_help="Show selected sections.")
@@ -676,3 +683,143 @@ def tail(count):
 
     tail.is_iter = True
     return tail
+
+
+def split_field_slices(value):
+    rv = []
+    for slice_str in value.split(','):
+        parts = slice_str.split('-')
+
+        if len(parts) == 1:
+            start = int(parts[0])
+            stop = start
+        elif len(parts) == 2:
+            try:
+                start = int(parts[0])
+            except ValueError:
+                start = None
+            try:
+                stop = int(parts[1])
+            except ValueError:
+                stop = None
+        else:
+            raise ValueError
+
+        if start is None and stop is None:
+            raise ValueError
+        if start is not None and stop is not None:
+            if start > stop:
+                raise ValueError
+        if start is not None:
+            start -= 1
+            if start < 0:
+                raise ValueError
+        if stop is not None:
+            if stop < 0:
+                raise ValueError
+
+        rv.append(slice(start, stop))
+
+    return rv
+
+
+@cli.command(short_help="Output selected parts of lines.")
+@click.option(
+    '-d',
+    '--delimiter',
+    metavar='PATTERN',
+    help="Use as field delimiter (consecutive delimiters delimit empty strings). "
+    "If not given, use runs of whitespace as a separator "
+    "(leading/trailing whitespace is not a separator).",
+)
+@click.option(
+    '-F',
+    '--fixed-strings',
+    is_flag=True,
+    help="Interpret the delimiter as a fixed string.",
+)
+@click.option(
+    '-i', '--ignore-case', is_flag=True, help="Perform case-insensitive matching."
+)
+@click.option(
+    '-f',
+    '--fields',
+    type=split_field_slices,
+    metavar='LIST',
+    help="Select only these fields.",
+)
+@click.option(
+    '--output-delimiter',
+    show_default=True,
+    help="Use as the output field delimiter. "
+    "If not given, and --delimiter and --fixed-strings are given, "
+    "use the input delimiter. Otherwise, use one space character.",
+)
+@section_option
+def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
+    """Print selected parts of lines.
+
+    Roughly equivalent to:
+
+    \b
+    * awk '{ print ... }' (without -d)
+    * cut -d delim (with -d delim -F)
+
+    Python equivalents:
+
+    \b
+    * line.split() (without -d)
+    * line.split(delim) (with -d delim -F)
+    * re.split(delim, line) (with -d delim)
+
+    --fields takes a comma-separated list of ranges, like the cut command.
+    Each range is one of:
+
+    \b
+    N
+      Nth field, counted from 1
+    N-
+      from Nth field to end of line
+    N-M
+      from Nth to Mth (included) field
+    -M
+      from first to Mth (included) field
+
+    Unlinke cut, selected fields are printed in the order from the list,
+    and more than once, if repeated.
+
+    """
+    if delimiter is None or (fixed_strings and not ignore_case):
+
+        def split(line):
+            return line.split(delimiter)
+
+    else:
+        pattern = compile_pattern(delimiter, fixed_strings, ignore_case)
+        split = pattern.split
+
+    if not output_delimiter:
+        if fixed_strings:
+            output_delimiter = delimiter
+        else:
+            output_delimiter = ' '
+
+    if not fields:
+        join = output_delimiter.join
+    else:
+
+        def join(parts):
+            return output_delimiter.join(
+                p for field_slice in fields for p in parts[field_slice]
+            )
+
+    def processor(line):
+        return join(split(line))
+
+    return processor
+
+    # TODO:
+    # tests
+    # --max split
+    # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
+    # -s, --only-delimited
