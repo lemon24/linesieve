@@ -207,6 +207,7 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
+    # pattern compilation error messages
     # TODO after 1.0:
     # hide lines in section after pattern
     # print last section without --failure if exec exits with non-zero (how?)

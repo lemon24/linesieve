@@ -1,0 +1,11 @@
+space
+a	b	c
+a	b	c
+pattern
+a	b	c
+	a	b
+fixedfields
+a.b
+a b.c
+xod
+a:b:
