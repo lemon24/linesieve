@@ -11,6 +11,12 @@ import linesieve
 from .parsing import make_pipeline
 
 
+# references for common command-line option names:
+# https://www.gnu.org/prep/standards/html_node/Option-Table.html
+# http://www.catb.org/~esr/writings/taoup/html/ch10s05.html
+# all the git options, generated with the script in the README
+
+
 def color_help(text):
 
     KWARGS = {
@@ -95,7 +101,7 @@ def list_commands_recursive(self, ctx, path=()):
     chain=True,
     invoke_without_command=True,
     help=color_help(linesieve.__doc__),
-    short_help="An unholy blend of grep, sed, and awk, with very specific features.",
+    short_help="An unholy blend of grep, sed, awk, and Python.",
 )
 @click.option(
     '-s',
@@ -399,7 +405,7 @@ def sub(pattern, repl, fixed_strings, only_matching, color):
     Works like re.findall() in Python:
     if there are no groups, output the entire match;
     if there is one group, output the group;
-    if there are multiple groups, output all of them, separated by tabs.
+    if there are multiple groups, output all of them (tab-separated).
     """,
 )
 @click.option(
@@ -711,11 +717,11 @@ def split_field_slices(value):
             if start > stop:
                 raise ValueError
         if start is not None:
-            start -= 1
-            if start < 0:
+            if start < 1:
                 raise ValueError
+            start -= 1
         if stop is not None:
-            if stop < 0:
+            if stop < 1:
                 raise ValueError
 
         rv.append(slice(start, stop))
@@ -729,8 +735,8 @@ def split_field_slices(value):
     '--delimiter',
     metavar='PATTERN',
     help="Use as field delimiter (consecutive delimiters delimit empty strings). "
-    "If not given, use runs of whitespace as a separator "
-    "(leading/trailing whitespace is not a separator).",
+    "If not given, use runs of whitespace as a delimiter "
+    "(with leading/trailing whitespace stripped first).",
 )
 @click.option(
     '-F',
@@ -739,7 +745,10 @@ def split_field_slices(value):
     help="Interpret the delimiter as a fixed string.",
 )
 @click.option(
-    '-i', '--ignore-case', is_flag=True, help="Perform case-insensitive matching."
+    '-i',
+    '--ignore-case',
+    is_flag=True,
+    help="Interpret the delimiter as case-insensitive.",
 )
 @click.option(
     '-f',
@@ -753,7 +762,7 @@ def split_field_slices(value):
     show_default=True,
     help="Use as the output field delimiter. "
     "If not given, and --delimiter and --fixed-strings are given, "
-    "use the input delimiter. Otherwise, use one space character.",
+    "use the input delimiter. Otherwise, use one tab character.",
 )
 @section_option
 def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
@@ -762,30 +771,26 @@ def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
     Roughly equivalent to:
 
     \b
-    * awk '{ print ... }' (without -d)
-    * cut -d delim (with -d delim -F)
+      awk '{ print ... }'     (no --delimiter)
+      cut -d delim            (--fixed-strings --delimiter delim)
 
     Python equivalents:
 
     \b
-    * line.split() (without -d)
-    * line.split(delim) (with -d delim -F)
-    * re.split(delim, line) (with -d delim)
+      line.split()            (no --delimiter)
+      line.split(delim)       (--fixed-strings --delimiter delim)
+      re.split(delim, line)   (--delimiter delim)
 
-    --fields takes a comma-separated list of ranges, like the cut command.
-    Each range is one of:
+    --fields takes a comma-separated list of ranges, each range one of:
 
     \b
-    N
-      Nth field, counted from 1
-    N-
-      from Nth field to end of line
-    N-M
-      from Nth to Mth (included) field
-    -M
-      from first to Mth (included) field
+      N     Nth field, counted from 1
+      N-    from Nth field to end of line
+      N-M   from Nth to Mth (included) field
+       -M   from first to Mth (included) field
 
-    Unlinke cut, selected fields are printed in the order from the list,
+    This is the same as the cut command. Unlike cut,
+    selected fields are printed in the order from the list,
     and more than once, if repeated.
 
     """
@@ -795,6 +800,7 @@ def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
             return line.split(delimiter)
 
     else:
+        # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
         pattern = compile_pattern(delimiter, fixed_strings, ignore_case)
         split = pattern.split
 
@@ -802,7 +808,7 @@ def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
         if fixed_strings:
             output_delimiter = delimiter
         else:
-            output_delimiter = ' '
+            output_delimiter = '\t'
 
     if not fields:
         join = output_delimiter.join
