@@ -218,7 +218,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
     # make dedupe_blank_lines optional
-    # -X verbose pattern
 
 
 def output_sections(groups, section_dot='.'):
@@ -315,12 +314,18 @@ def pattern_argument(fn):
     @click.option(
         '-i', '--ignore-case', is_flag=True, help="Perform case-insensitive matching."
     )
+    @click.option(
+        '-X',
+        '--verbose',
+        is_flag=True,
+        help="Ignore whitespace and comments in the pattern.",
+    )
     @click.argument('PATTERN')
     @wraps(fn)
-    def wrapper(*args, pattern, fixed_strings, ignore_case, **kwargs):
+    def wrapper(*args, pattern, fixed_strings, ignore_case, verbose, **kwargs):
         return fn(
             *args,
-            pattern=compile_pattern(pattern, fixed_strings, ignore_case),
+            pattern=compile_pattern(pattern, fixed_strings, ignore_case, verbose),
             fixed_strings=fixed_strings,
             **kwargs,
         )
@@ -328,13 +333,15 @@ def pattern_argument(fn):
     return wrapper
 
 
-def compile_pattern(pattern, fixed_strings, ignore_case):
+def compile_pattern(pattern, fixed_strings, ignore_case, verbose):
     if fixed_strings:
         pattern = re.escape(pattern)
 
     flags = 0
     if ignore_case:
         flags |= re.IGNORECASE
+    if verbose:
+        flags |= re.VERBOSE
 
     return re.compile(pattern, flags)
 
@@ -745,6 +752,12 @@ def split_field_slices(value):
     help="Interpret the delimiter as case-insensitive.",
 )
 @click.option(
+    '-X',
+    '--verbose',
+    is_flag=True,
+    help="Ignore whitespace and comments in the delimiter.",
+)
+@click.option(
     '-f',
     '--fields',
     type=split_field_slices,
@@ -752,6 +765,7 @@ def split_field_slices(value):
     help="Select only these fields.",
 )
 @click.option(
+    '-D',
     '--output-delimiter',
     show_default=True,
     help="Use as the output field delimiter. "
@@ -759,7 +773,7 @@ def split_field_slices(value):
     "use the input delimiter. Otherwise, use one tab character.",
 )
 @section_option
-def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
+def split(delimiter, fixed_strings, ignore_case, verbose, fields, output_delimiter):
     """Print selected parts of lines.
 
     Roughly equivalent to:
@@ -795,7 +809,7 @@ def split(delimiter, fixed_strings, ignore_case, fields, output_delimiter):
 
     else:
         # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
-        pattern = compile_pattern(delimiter, fixed_strings, ignore_case)
+        pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
         split = pattern.split
 
     if not output_delimiter:
