@@ -218,6 +218,7 @@ def process_pipeline(ctx, processors, section, success, failure):
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
     # make dedupe_blank_lines optional
+    # -X verbose pattern
 
 
 def output_sections(groups, section_dot='.'):
@@ -697,17 +698,10 @@ def split_field_slices(value):
         parts = slice_str.split('-')
 
         if len(parts) == 1:
-            start = int(parts[0])
-            stop = start
+            start = stop = int(parts[0])
         elif len(parts) == 2:
-            try:
-                start = int(parts[0])
-            except ValueError:
-                start = None
-            try:
-                stop = int(parts[1])
-            except ValueError:
-                stop = None
+            start = int(parts[0]) if parts[0] else None
+            stop = int(parts[1]) if parts[1] else None
         else:
             raise ValueError
 

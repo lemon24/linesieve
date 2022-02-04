@@ -6,6 +6,7 @@ import pytest
 from click.testing import CliRunner
 
 from linesieve.cli import cli
+from linesieve.cli import split_field_slices
 
 
 ROOT = pathlib.Path(__file__).parent
@@ -184,3 +185,25 @@ def test_sub_paths(tmp_path, monkeypatch, options, input, output):
         output = input
 
     assert result.output.rstrip('\n') == output
+
+
+@pytest.mark.parametrize(
+    'input, output',
+    [
+        ('1', [slice(0, 1)]),
+        ('2-', [slice(1, None)]),
+        ('3-6', [slice(2, 6)]),
+        ('-7', [slice(None, 7)]),
+        ('2,10-,4-8,-2', [slice(1, 2), slice(9, None), slice(3, 8), slice(None, 2)]),
+    ],
+)
+def test_split_field_slices(input, output):
+    assert split_field_slices(input) == output
+
+
+@pytest.mark.parametrize(
+    'input', ['', '0', '-0', '2-1', '1-2-3', '-', '1,', ',', ',3', 'a', 'a-3']
+)
+def test_split_field_slices_error(input):
+    with pytest.raises(ValueError):
+        split_field_slices(input)
