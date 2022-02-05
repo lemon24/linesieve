@@ -759,6 +759,13 @@ def split_field_slices(value):
     help="Ignore whitespace and comments in the delimiter.",
 )
 @click.option(
+    '-n',
+    '--max-split',
+    metavar="INTEGER",
+    type=click.IntRange(1),
+    help="Maximum number of splits to do. The default is no limit.",
+)
+@click.option(
     '-f',
     '--fields',
     type=split_field_slices,
@@ -774,7 +781,9 @@ def split_field_slices(value):
     "use the input delimiter. Otherwise, use one tab character.",
 )
 @section_option
-def split(delimiter, fixed_strings, ignore_case, verbose, fields, output_delimiter):
+def split(
+    delimiter, fixed_strings, ignore_case, verbose, max_split, fields, output_delimiter
+):
     """Print selected parts of lines.
 
     Roughly equivalent to:
@@ -804,14 +813,18 @@ def split(delimiter, fixed_strings, ignore_case, verbose, fields, output_delimit
 
     """
     if delimiter is None or (fixed_strings and not ignore_case):
+        max_split = max_split or -1
 
         def split(line):
-            return line.split(delimiter)
+            return line.split(delimiter, max_split)
 
     else:
         # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
         pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
-        split = pattern.split
+        max_split = max_split or 0
+
+        def split(line):
+            return pattern.split(line, max_split)
 
     if not output_delimiter:
         if fixed_strings:
@@ -834,7 +847,6 @@ def split(delimiter, fixed_strings, ignore_case, verbose, fields, output_delimit
     return processor
 
     # TODO:
-    # tests
-    # --max split
-    # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
     # -s, --only-delimited
+    # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
+    #   ...this requires a custom string.Formatter that coerces string arguments

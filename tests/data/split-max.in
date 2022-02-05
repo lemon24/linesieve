@@ -1,0 +1,7 @@
+-s '(\S+):$' split -s one -n1 -D: split -s fixed -n1 -F -d'\s' -D: split -s pattern -n2 -d'\W+' -D:
+one:
+a b c
+fixed:
+a\sb\sc
+pattern:
+a-b#c*d
