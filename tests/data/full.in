@@ -1,4 +1,7 @@
---section '(\S+):$' --failure 'bad end' --success 'good end' show two sub roman ROMAN
+--section '(\S+):$' --failure 'bad end' --success 'good end'
+show two
+sub roman ROMAN
+---
 
 before
 

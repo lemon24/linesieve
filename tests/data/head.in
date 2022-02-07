@@ -1,4 +1,9 @@
---section '(\S+):$' head -s aaa -n1 head -s bbb -n+1 head -s ccc -n-1 head -s ddd -n0
+--section '(\S+):$'
+head -s aaa -n1
+head -s bbb -n+1
+head -s ccc -n-1
+head -s ddd -n0
+---
 aaa:
 1a
 2a

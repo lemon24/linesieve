@@ -1,4 +1,9 @@
---section '(\S+):$' tail -s aaa -n1 tail -s bbb -n+2 tail -s ccc -n-1 tail -s ddd -n0
+--section '(\S+):$'
+tail -s aaa -n1
+tail -s bbb -n+2
+tail -s ccc -n-1
+tail -s ddd -n0
+---
 aaa:
 1a
 2a

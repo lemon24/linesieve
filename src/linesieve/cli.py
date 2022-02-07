@@ -207,16 +207,20 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
+    # TODO before 1.0:
     # pattern compilation error messages
-    # TODO after 1.0:
-    # hide lines in section after pattern
-    # print last section without --failure if exec exits with non-zero (how?)
+    # section -s pattern section --include pattern
     # hide section
-    # exec time
+    # match-span --start pattern --end pattern --replace '...'
+    # hide lines in section after pattern
     # match replace spans of skipped lines with ...
+    # TODO after 1.0:
+    # match -e pattern -e pattern (hard to do with click while keeping arg)
+    # push --section pattern ... pop
+    # print last section without --failure if exec exits with non-zero (how?)
+    # exec time
     # collapse any repeated lines
     # runfilter "grep pattern"
-    # match -e pattern -e pattern (hard to do with click while keeping arg)
     # short command aliases (four-letter ones)
     # make dedupe_blank_lines optional
 

@@ -1,4 +1,5 @@
 --section '(\S+):$'
+---
 one:
 1
 two:

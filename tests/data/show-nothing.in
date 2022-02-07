@@ -1,4 +1,5 @@
 --section '(\S+):$' show '$nothing'
+---
 0
 one:
 1

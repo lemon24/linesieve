@@ -15,7 +15,12 @@ ROOT = pathlib.Path(__file__).parent
 def load_data(root):
     for path in sorted(root.glob('data/*.in')):
         with path.open() as f:
-            args = shlex.split(next(f).rstrip())
+            command = []
+            for line in f:
+                if line.strip() == '---':
+                    break
+                command.append(line)
+            args = shlex.split('\n'.join(command))
             input = f.read()
         with path.with_suffix('.out').open() as f:
             output = f.read()

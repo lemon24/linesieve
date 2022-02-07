@@ -1,4 +1,9 @@
--s '(\S+):$' split -s space split -s pattern -d '\s+' split -s fixedfields -F -d . -f-2 split -s xod -X -d ' \d [a-z] ' -D:
+-s '(\S+):$'
+split -s space
+split -s pattern -d '\s+'
+split -s fixedfields -F -d . -f-2
+split -s xod -X -d ' \d [a-z] ' -D:
+---
 space:
  a  b   c
 a b c

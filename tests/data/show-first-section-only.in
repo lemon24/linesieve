@@ -1,4 +1,5 @@
 --section '(\S+):$' show '^$'
+---
 0
 one:
 1
