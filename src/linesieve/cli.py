@@ -211,9 +211,6 @@ def process_pipeline(ctx, processors, section, success, failure):
     # pattern compilation error messages
     # section -s pattern section --include pattern
     # hide section
-    # match-span --start pattern --end pattern --replace '...'
-    # hide lines in section after pattern
-    # match replace spans of skipped lines with ...
     # TODO after 1.0:
     # match -e pattern -e pattern (hard to do with click while keeping arg)
     # push --section pattern ... pop
@@ -223,6 +220,7 @@ def process_pipeline(ctx, processors, section, success, failure):
     # runfilter "grep pattern"
     # short command aliases (four-letter ones)
     # make dedupe_blank_lines optional
+    # match replace spans of skipped lines with ... (match span already does this)
 
 
 def output_sections(groups, section_dot='.'):
@@ -309,23 +307,34 @@ def exec(obj, command, argument):
     obj['file'] = process.stdout
 
 
-def pattern_argument(fn):
-    @click.option(
+PATTERN_OPTIONS = [
+    click.option(
         '-F',
         '--fixed-strings',
         is_flag=True,
         help="Interpret the pattern as a fixed string.",
-    )
-    @click.option(
+    ),
+    click.option(
         '-i', '--ignore-case', is_flag=True, help="Perform case-insensitive matching."
-    )
-    @click.option(
+    ),
+    click.option(
         '-X',
         '--verbose',
         is_flag=True,
         help="Ignore whitespace and comments in the pattern.",
-    )
-    @click.argument('PATTERN')
+    ),
+]
+
+
+def pattern_options(fn):
+    for decorator in PATTERN_OPTIONS:
+        fn = decorator(fn)
+    return fn
+
+
+def pattern_argument(fn):
+    @click.argument('pattern')
+    @pattern_options
     @wraps(fn)
     def wrapper(*args, pattern, fixed_strings, ignore_case, verbose, **kwargs):
         return fn(
@@ -468,6 +477,62 @@ def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
             return None
 
     return search
+
+
+@cli.command(short_help="Output matching line spans.")
+@click.option(
+    '--start', '--start-with', metavar='PATTERN', help="Span start (inclusive)."
+)
+@click.option('--end', '--end-before', metavar='PATTERN', help="Span end (exclusive).")
+@pattern_options
+@click.option(
+    '-v',
+    '--invert-match',
+    is_flag=True,
+    help="Output only lines *not* between those matching --start and --end.",
+)
+@click.option(
+    '--repl', '--replacement', help="Replace non-matching line spans with TEXT."
+)
+@section_option
+def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
+    """Output only lines between those matching --start and --end.
+
+    Roughly equivalent to: grep START -A9999 | grep END -B9999 | head -n-1
+
+    """
+
+    # options reserved for future expansion:
+    # --start-after (mutually exclusive with --start-with)
+    # --end-with (mutually exclusive with --end-before)
+
+    # TODO: should start/end be arguments? hard to do if we want them to be optional
+
+    start_re = (
+        compile_pattern(start, fixed_strings, ignore_case, verbose) if start else None
+    )
+    end_re = compile_pattern(end, fixed_strings, ignore_case, verbose) if end else None
+
+    def match_span(lines):
+        in_span = False
+        in_span_changed = True
+
+        for line in lines:
+            if start_re and start_re.search(line):
+                in_span = True
+                in_span_changed = True
+            elif end_re and end_re.search(line):
+                in_span = False
+                in_span_changed = True
+
+            if invert_match != in_span:
+                yield line
+            elif repl is not None and in_span_changed:
+                yield repl
+                in_span_changed = False
+
+    match_span.is_iter = True
+    return match_span
 
 
 @cli.command(short_help="Shorten paths of existing files.")
@@ -744,24 +809,7 @@ def split_field_slices(value):
     "If not given, use runs of whitespace as a delimiter "
     "(with leading/trailing whitespace stripped first).",
 )
-@click.option(
-    '-F',
-    '--fixed-strings',
-    is_flag=True,
-    help="Interpret the delimiter as a fixed string.",
-)
-@click.option(
-    '-i',
-    '--ignore-case',
-    is_flag=True,
-    help="Interpret the delimiter as case-insensitive.",
-)
-@click.option(
-    '-X',
-    '--verbose',
-    is_flag=True,
-    help="Ignore whitespace and comments in the delimiter.",
-)
+@pattern_options
 @click.option(
     '-n',
     '--max-split',

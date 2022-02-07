@@ -1,0 +1,86 @@
+--section '(\S+):$'
+match-span -s ^simple$ --start 2 --end 4
+match-span -s ^simple-invert$ --start 2 --end 4 -v
+match-span -s ^no-end$ --start 2
+match-span -s ^no-end-invert$ --start 2 -v
+match-span -s ^no-start$ --end 4
+match-span -s ^no-start-invert$ --end 4 -v
+match-span -s ^repl$ --start 2 --end 4 --repl ...
+match-span -s ^repl-invert$ --start 2 --end 4 --repl ... -v
+match-span -s ^repl-edges$ --start 1 --end 5 --repl ...
+match-span -s ^repl-invert-one$ --start 2 --end 3 --repl ... -v
+match-span -s ^repl-no-end$ --start 2  --repl ...
+
+---
+simple:
+1
+2
+3
+4
+5
+simple-invert:
+1
+2
+3
+4
+5
+no-end:
+1
+2
+3
+4
+5
+no-end-invert:
+1
+2
+3
+4
+5
+no-start:
+1
+2
+3
+4
+5
+no-start-invert:
+1
+2
+3
+4
+5
+repl:
+1
+2
+3
+4
+5
+repl-invert:
+1
+2
+3
+4
+5
+repl-edges:
+1
+2
+3
+4
+5
+repl-invert-one:
+1
+2
+3
+4
+5
+repl-no-end:
+1
+2
+3
+4
+5
+repl-no-start-invert:
+1
+2
+3
+4
+5
