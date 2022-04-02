@@ -2,6 +2,7 @@ import pathlib
 import shlex
 from textwrap import dedent
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -44,7 +45,7 @@ DATA = dict(load_data(ROOT))
 def test_data(args, input, output):
     runner = CliRunner()
     result = runner.invoke(cli, args, input, catch_exceptions=False)
-    assert result.output == output
+    assert click.unstyle(result.output) == output
 
 
 def test_sub_cwd(tmp_path, monkeypatch):
@@ -117,16 +118,16 @@ def test_sub_link(tmp_path, monkeypatch):
 
 
 SUB_PATHS = """
-src/package/subpackage/__init__.py
-src/package/subpackage/module.py
-src/package/subpackage/py.typed
-tst/test.py
+    src/package/subpackage/__init__.py
+    src/package/subpackage/module.py
+    src/package/subpackage/py.typed
+    tst/test.py
 """.split()
 
-
-SUB_PATHS_DATA = [
-    ('', path, None)
-    for path in """
+SUB_PATHS_DATA = (
+    [
+        ('', path, None)
+        for path in """
         src/package
         src/package/none.py
         src/package/subpackage
@@ -135,38 +136,44 @@ SUB_PATHS_DATA = [
         src.package.subpackage.module
         tst.test
     """.split()
-] + [
-    ('', 'src/package/subpackage/module.py', '.../module.py'),
-    ('', 'tst/test.py', '.../test.py'),
-    ('--modules', 'package.subpackage.module', None),
-    ('--modules', 'src.package.subpackage', None),
-    ('--modules', 'src.package.subpackage.module', '..module'),
-    ('--modules', 'tst.test', '..test'),
-    ('--modules-skip 1', 'package.subpackage.module', '..module'),
-    ('--modules-skip 1', 'package.subpackage', None),
-    ('--modules-skip 1', 'test', None),
-    ('--modules-skip 1', 'tst.test', None),
-    ('--modules-skip 1 --modules-recursive', 'package.subpackage.module', '..module'),
-    ('--modules-skip 1 --modules-recursive', 'package.subpackage', '..subpackage'),
-    ('--modules-skip 1 --modules-recursive', 'tst.test', None),
-    # boundaries
-    ('', ' tst/test.py', ' .../test.py'),
-    ('', 'atst/test.py', 'atst/test.py'),
-    ('', '-tst/test.py', '-tst/test.py'),
-    ('', 'tst/test.py.gz', 'tst/test.py.gz'),
-    ('', 'tst/test.pyi', 'tst/test.pyi'),
-    ('', '"tst/test.py"', '".../test.py"'),
-    ('--modules', ' tst.test', ' ..test'),
-    ('--modules', 'atst.test', 'atst.test'),
-    ('--modules', 'tst.testz', 'tst.testz'),
-    ('--modules', '-tst.test', '-..test'),
-    ('--modules', 'tst.test-', '..test-'),
-    ('--modules', '_tst.test', '_tst.test'),
-    ('--modules', 'tst.test_', 'tst.test_'),
-    ('--modules', '"tst.test"', '"..test"'),
-    ('--modules', 'nope.tst.test', 'nope...test'),
-    ('--modules', 'tst.test.nope', '..test.nope'),
-]
+    ]
+    + [
+        ('', 'src/package/subpackage/module.py', '.../module.py'),
+        ('', 'tst/test.py', '.../test.py'),
+        ('--modules', 'package.subpackage.module', None),
+        ('--modules', 'src.package.subpackage', None),
+        ('--modules', 'src.package.subpackage.module', '..module'),
+        ('--modules', 'tst.test', '..test'),
+        ('--modules-skip 1', 'package.subpackage.module', '..module'),
+        ('--modules-skip 1', 'package.subpackage', None),
+        ('--modules-skip 1', 'test', None),
+        ('--modules-skip 1', 'tst.test', None),
+        (
+            '--modules-skip 1 --modules-recursive',
+            'package.subpackage.module',
+            '..module',
+        ),
+        ('--modules-skip 1 --modules-recursive', 'package.subpackage', '..subpackage'),
+        ('--modules-skip 1 --modules-recursive', 'tst.test', None),
+        # boundaries
+        ('', ' tst/test.py', ' .../test.py'),
+        ('', 'atst/test.py', 'atst/test.py'),
+        ('', '-tst/test.py', '-tst/test.py'),
+        ('', 'tst/test.py.gz', 'tst/test.py.gz'),
+        ('', 'tst/test.pyi', 'tst/test.pyi'),
+        ('', '"tst/test.py"', '".../test.py"'),
+        ('--modules', ' tst.test', ' ..test'),
+        ('--modules', 'atst.test', 'atst.test'),
+        ('--modules', 'tst.testz', 'tst.testz'),
+        ('--modules', '-tst.test', '-..test'),
+        ('--modules', 'tst.test-', '..test-'),
+        ('--modules', '_tst.test', '_tst.test'),
+        ('--modules', 'tst.test_', 'tst.test_'),
+        ('--modules', '"tst.test"', '"..test"'),
+        ('--modules', 'nope.tst.test', 'nope...test'),
+        ('--modules', 'tst.test.nope', '..test.nope'),
+    ]
+)
 
 
 @pytest.mark.parametrize('options, input, output', SUB_PATHS_DATA)

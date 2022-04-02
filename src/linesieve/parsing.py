@@ -225,7 +225,7 @@ def filter_lines(groups, get_filters):
 
             for is_iter, group in grouped:
                 if is_iter:
-                    for filter in filters:
+                    for filter in group:
                         lines = filter(lines)
                 else:
                     lines = filter_lines(lines, list(group))

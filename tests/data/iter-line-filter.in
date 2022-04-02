@@ -1,0 +1,9 @@
+head -n4
+match '[a-z]'
+head -n4
+match '[a-z]'
+---
+a
+b
+c
+d

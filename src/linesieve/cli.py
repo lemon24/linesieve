@@ -209,11 +209,12 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     # TODO before 1.0:
     # pattern compilation error messages
-    # section -s pattern section --include pattern
-    # hide section
-    # TODO after 1.0:
-    # match -e pattern -e pattern (hard to do with click while keeping arg)
     # push --section pattern ... pop
+    # bugbear?
+    # TODO after 1.0:
+    # hide section
+    # match -e pattern -e pattern (hard to do with click while keeping arg)
+    # match-span -s ... -s ..s
     # print last section without --failure if exec exits with non-zero (how?)
     # exec time
     # collapse any repeated lines
@@ -221,6 +222,7 @@ def process_pipeline(ctx, processors, section, success, failure):
     # short command aliases (four-letter ones)
     # make dedupe_blank_lines optional
     # match replace spans of skipped lines with ... (match span already does this)
+    # section -s pattern section --include pattern (tried it, not necessarily better)
 
 
 def output_sections(groups, section_dot='.'):
