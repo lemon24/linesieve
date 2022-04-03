@@ -12,6 +12,8 @@ match-span -s ^repl-invert-one$ --start 2 --end 3 --repl ... -v
 match-span -s ^repl-no-end$ --start 2  --repl ...
 match-span -s ^repl-two-ends$ --start 3 --end [45] --repl ...
 match-span -s ^repl-invert-two-starts$ --start [23] --end 5 --repl ... -v
+match-span -s ^repl-capture$ --start '(2)' --end 4 --repl '>\\<'
+match-span -s ^repl-invert-capture$ --start '(2)' --end 4 --repl '>\1<' -v
 
 ---
 simple:
@@ -93,6 +95,18 @@ repl-two-ends:
 4
 5
 repl-invert-two-starts:
+1
+2
+3
+4
+5
+repl-capture:
+1
+2
+3
+4
+5
+repl-invert-capture:
 1
 2
 3

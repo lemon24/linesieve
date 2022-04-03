@@ -494,7 +494,13 @@ def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
     help="Output only lines *not* between those matching --start and --end.",
 )
 @click.option(
-    '--repl', '--replacement', help="Replace non-matching line spans with TEXT."
+    '--repl',
+    '--replacement',
+    help="""
+    Replace non-matching line spans with TEXT.
+    With --invert-match, backreferences to captures in --start are expanded;
+    without --invert-match, only escapes are expanded.
+    """,
 )
 @section_option
 def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
@@ -509,19 +515,22 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
     # --end-with (mutually exclusive with --end-before)
 
     # TODO: should start/end be arguments? hard to do if we want them to be optional
-    # TODO: --repl should have regex semantics (and capture on that group)
 
     start_re = (
         compile_pattern(start, fixed_strings, ignore_case, verbose) if start else None
     )
     end_re = compile_pattern(end, fixed_strings, ignore_case, verbose) if end else None
 
+    empty_match = re.search('.*', '')
+
     def match_span(lines):
         in_span = False
         in_span_changed = True
 
         for line in lines:
-            if start_re and start_re.search(line):
+            start_match = start_re.search(line) if start_re else None
+
+            if start_re and start_match:
                 if not in_span:
                     in_span = True
                     in_span_changed = True
@@ -533,7 +542,13 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
             if invert_match != in_span:
                 yield line
             elif repl is not None and in_span_changed:
-                yield repl
+
+                if invert_match and start_match:
+                    repl_match = start_match
+                else:
+                    repl_match = empty_match
+
+                yield repl_match.expand(repl)
                 in_span_changed = False
 
     match_span.is_iter = True
