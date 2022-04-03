@@ -139,14 +139,14 @@ java.lang.RuntimeException: listener failed
 Let's break that linesieve command down a bit:
 
 * The `match-span` gets rid of all the traceback lines coming from JUnit.
-* The `sub-paths` shortens the names of classes in the current project;
-  *com.example.someproject.somepackage.ThingDoer* becomes *..ThingDoer*
+* The `sub-paths` shortens and highlights the names of classes in the current project;
+  `com.example.someproject.somepackage.ThingDoer` becomes `..ThingDoer`
   (presumably that's enough info to open the file).
 * The first `sub` gets rid of line numbers and JAR names for everything
-  that is not either in the current project or in another *com.example.` package.
-* The second `sub` gets rid of JAR names for things in other *com.example.` packages.
+  that is not either in the current project or in another `com.example.` package.
+* The second `sub` gets rid of JAR names for things in other `com.example.` packages.
 * The third `sub` gets rid of the source file name;
-  *..ThingDoer.doThing(ThingDoer.java:69)* becomes *..ThingDoer.doThing(:69)*
+  `..ThingDoer.doThing(ThingDoer.java:69)` becomes `..ThingDoer.doThing(:69)`
   (the file name matches the class name).
 
 
