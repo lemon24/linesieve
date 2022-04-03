@@ -509,6 +509,7 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
     # --end-with (mutually exclusive with --end-before)
 
     # TODO: should start/end be arguments? hard to do if we want them to be optional
+    # TODO: --repl should have regex semantics (and capture on that group)
 
     start_re = (
         compile_pattern(start, fixed_strings, ignore_case, verbose) if start else None
@@ -521,11 +522,13 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
 
         for line in lines:
             if start_re and start_re.search(line):
-                in_span = True
-                in_span_changed = True
+                if not in_span:
+                    in_span = True
+                    in_span_changed = True
             elif end_re and end_re.search(line):
-                in_span = False
-                in_span_changed = True
+                if in_span:
+                    in_span = False
+                    in_span_changed = True
 
             if invert_match != in_span:
                 yield line
