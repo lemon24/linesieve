@@ -209,7 +209,6 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     # TODO before 1.0:
     # pattern compilation error messages
-    # open and exec error message
     # bugbear?
     # TODO after 1.0:
     # hide section
@@ -282,15 +281,15 @@ def open(obj, file):
     Roughly equivalent to: cat FILE | linesieve
 
     """
-    assert not obj.get('file')
+    assert not obj.get('file'), "should not be possible for open to follow exec"
     obj['file'] = file
 
 
 @cli.command(short_help="Read input from command.")
 @click.argument('command')
 @click.argument('argument', nargs=-1)
-@click.pass_obj
-def exec(obj, command, argument):
+@click.pass_context
+def exec(ctx, command, argument):
     """Execute COMMAND and use its output as input.
 
     Roughly equivalent to: COMMAND | linesieve
@@ -298,7 +297,9 @@ def exec(obj, command, argument):
     If the command finishes, exit with its status code.
 
     """
-    assert not obj.get('file')
+    obj = ctx.obj
+    if obj.get('file'):
+        ctx.fail("exec and open are mutually exclusive")
     process = subprocess.Popen(
         (command,) + argument,
         text=True,
