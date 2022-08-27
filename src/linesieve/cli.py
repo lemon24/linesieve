@@ -209,7 +209,7 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     # TODO before 1.0:
     # pattern compilation error messages
-    # push --section pattern ... pop
+    # open and exec error message
     # bugbear?
     # TODO after 1.0:
     # hide section
@@ -375,17 +375,67 @@ def show(obj, pattern, fixed_strings):
     obj.setdefault('show', []).append(pattern)
 
 
+@cli.command(short_help="Push patterns onto the section stack.")
+@pattern_argument
+@click.pass_obj
+def push(obj, pattern, fixed_strings):
+    """Push a pattern onto the section stack.
+
+    When there are patterns on the section stack,
+    filters apply only to the sections that match
+    any of the patterns in the stack.
+
+    'filter --section PATTERN' is equivalent to
+    'push PATTERN filter pop'.
+
+    """
+    stack = obj.setdefault('section_stack', [])
+    stack.append(pattern)
+
+
+@cli.command(short_help="Pop patterns off the section stack.")
+@click.option(
+    '-a', '--all', is_flag=True, help="Remove all the patterns from the stack."
+)
+@click.pass_context
+def pop(ctx, all):
+    """Pop patterns off the section stack. See 'push' for details.
+
+    With no arguments, removes the top pattern from the stack.
+
+    """
+    stack = ctx.obj.setdefault('section_stack', [])
+    if not all:
+        if not stack:
+            raise ctx.fail('nothing to pop')
+        stack.pop()
+    else:
+        stack.clear()
+
+
 def section_option(fn):
     @click.option(
-        '-s', '--section', metavar='PATTERN', help="Apply only to matching sections."
+        '-s',
+        '--section',
+        metavar='PATTERN',
+        help="""
+        Apply only to matching sections.
+        If there are patterns on the section stack,
+        push the pattern (that is, apply *also* to matching sections).
+        """,
     )
     @wraps(fn)
     def wrapper(*args, section, **kwargs):
         rv = fn(*args, **kwargs)
         if rv is None:
             return None
-        section_re = re.compile(section) if section is not None else None
-        return section_re, rv
+
+        ctx = click.get_current_context()
+        section_res = list(ctx.obj.setdefault('section_stack', []))
+        if section is not None:
+            section_res.append(re.compile(section))
+
+        return section_res, rv
 
     return wrapper
 

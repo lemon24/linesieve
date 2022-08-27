@@ -33,8 +33,8 @@ def make_pipeline(
     @lru_cache
     def get_filters(section):
         rv = []
-        for section_re, filter in line_filters:
-            if not section_re or section_re.search(section):
+        for section_res, filter in line_filters:
+            if not section_res or any(r.search(section) for r in section_res):
                 rv.append(filter)
         return rv
 

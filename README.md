@@ -13,6 +13,7 @@ with *very* specific features, born out of spite.
 * section-oriented
   * show only matching sections
   * show the failing section
+  * apply filters only to specific sections
 * match/sub with the full power of [re](https://docs.python.org/3/library/re.html)
 * chain filters into pipelines
 * colors!

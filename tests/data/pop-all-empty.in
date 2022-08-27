@@ -1,0 +1,4 @@
+--section '(\S+):$'
+pop --all
+---
+xxx

@@ -1,0 +1,20 @@
+--section '(\S+):$'
+push o
+  sub 1 2
+  push t
+    sub 2 3
+pop --all
+sub '(\d)' '\1\1'
+---
+one:
+1
+two:
+1
+three:
+1
+four:
+1
+fifty:
+1
+fiftyfive:
+2
