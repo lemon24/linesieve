@@ -140,6 +140,7 @@ def handle_re_error(param_hint):
     """,
 )
 @help_all_option()
+@click.version_option(linesieve.__version__, message='%(prog)s %(version)s')
 @click.pass_context
 def cli(ctx, **kwargs):
     # options reserved for future expansion:
@@ -231,7 +232,7 @@ def process_pipeline(ctx, processors, section, success, failure):
     ctx.exit(returncode)
 
     # TODO before 1.0:
-    # --version
+    # do not sort commands?
     # bugbear?
     # TODO after 1.0:
     # hide section
