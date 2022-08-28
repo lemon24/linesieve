@@ -109,10 +109,26 @@ def handle_re_error(param_hint):
         raise BadParameter(f"{e}: {e.pattern!r}", param_hint=param_hint)
 
 
+FURTHER_HELP = """\
+\b
+linesieve COMMAND --help
+linesieve --help-all
+https://github.com/lemon24/linesieve
+"""
+
+
+class CLIGroup(click.Group):
+    def format_options(self, ctx, formatter):
+        super().format_options(ctx, formatter)
+        with formatter.section('Further help'):
+            formatter.write_text(FURTHER_HELP)
+
+
 @click.group(
     name='linesieve',
     chain=True,
     invoke_without_command=True,
+    cls=CLIGroup,
     help=color_help(linesieve.__doc__),
     short_help="An unholy blend of grep, sed, awk, and Python.",
 )
