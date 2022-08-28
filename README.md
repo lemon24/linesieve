@@ -151,4 +151,188 @@ Let's break that linesieve command down a bit:
   (the file name matches the class name).
 
 
-### TODO: Ant output
+### Apache Ant output
+
+Finally, let's look at why linesieve was born in the first place
+– cleaning up Apache Ant output.
+
+We'll use Ant's own test output as an example,
+since it [builds itself](https://github.com/apache/ant/tree/ff62ff7151bbc84a7706f40988258fabbcc324f5).
+
+Running a single test with `ant junit-single-test -Djunit.testcase=org.apache.tools.ant.ProjectTest`
+produces 77 lines of output, which looks like this:
+
+```
+Buildfile: /Users/lemon/code/ant/build.xml
+
+check-optional-packages:
+
+prepare:
+
+compile:
+
+compile-jdk9+:
+
+build:
+   [delete] Deleting directory /Users/lemon/code/ant/build/classes/org/apache/tools/ant/taskdefs/optional/junitlauncher/confined
+        ... more lines
+
+... more targets, until we get to the one that we care about
+
+junit-single-test-only:
+    [junit] WARNING: multiple versions of ant detected in path for junit
+    [junit]          file:/Users/lemon/code/ant/build/classes/org/apache/tools/ant/Project.class
+    [junit]      and jar:file:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant.jar!/org/apache/tools/ant/Project.class
+    [junit] Testsuite: org.apache.tools.ant.ProjectTest
+    [junit] Tests run: 12, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 5.635 sec
+        ... more lines
+
+junit-single-test:
+
+BUILD SUCCESSFUL
+Total time: 12 seconds
+```
+
+(If you don't think it's all that bad,
+try to imagine how it would look for a serious Enterprise Project™️.)
+
+This is indeed very helpful
+– if you're waiting tens of minutes for the entire test suite to run,
+you want all the details in the output,
+so you can debug failures without having to run it another time.
+
+However, it's not very helpful when you're developing,
+and only care about the thing you're working on right now.
+
+This is where a script consisting of a single linesieve command comes in:
+
+```bash
+#!/bin/sh
+
+linesieve \
+    --section '^(\S+):$' \
+    --success 'BUILD SUCCESSFUL' \
+    --failure 'BUILD FAILED' \
+show junit-batch \
+show junit-single-test-only \
+sub-cwd \
+sub-paths --include 'src/main/**/*.java' --modules-skip 2 \
+sub-paths --include 'src/tests/junit/**/*.java' --modules-skip 3 \
+sub -s compile '^\s+\[javac?] ' '' \
+push compile \
+    match -v '^Compiling \d source file' \
+    match -v '^Ignoring source, target' \
+pop \
+push junit \
+    sub '^\s+\[junit] ?' '' \
+    match-span -v \
+        --start '^WARNING: multiple versions of ant' \
+        --end '^Testsuite:' \
+    match -v '^\s+at java\.\S+\.reflect\.' \
+    match -v '^\s+at org.junit.Assert' \
+    match-span -v \
+        --start '^\s+at org.junit.(runners|rules|internal)' \
+        --end '^(?!\s+at )' \
+pop \
+sub -X '^( \s+ at \s+ (?! .+ \.\. ) .*? ) \( .*' '\1' \
+sub -X '
+    (?P<pre> \s+ at \s .*)
+    (?P<cls> \w+ )
+    (?P<mid> .* \( )
+    (?P=cls) \.java
+    (?P<suf> : .* )
+    ' \
+    '\g<pre>\g<cls>\g<mid>\g<suf>' \
+sub --color -X '^( \w+ (\.\w+)+ (?= :\s ))' '\1' \
+sub --color -X '(FAILED)' '\1' \
+exec ant "$@"
+```
+
+You can then call it instead of `ant`: `ant-wrapper.sh junit-single-test ...`.
+
+TODO: describe this output
+
+```
+............
+junit-single-test-only
+Testsuite: ..ProjectTest
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 5.635 sec
+------------- Standard Output ---------------
+bar
+------------- ---------------- ---------------
+------------- Standard Error -----------------
+bar
+------------- ---------------- ---------------
+
+Testcase: testResolveFileWithDriveLetter took 0.034 sec
+	SKIPPED: Not DOS or Netware
+Testcase: testResolveFileWithDriveLetter took 0.036 sec
+Testcase: testInputHandler took 0.007 sec
+Testcase: testAddTaskDefinition took 0.179 sec
+Testcase: testTaskDefinitionContainsKey took 0.002 sec
+Testcase: testDuplicateTargets took 0.05 sec
+Testcase: testResolveRelativeFile took 0.002 sec
+Testcase: testOutputDuringMessageLoggedIsSwallowed took 0.002 sec
+Testcase: testDataTypes took 0.154 sec
+Testcase: testDuplicateTargetsImport took 0.086 sec
+Testcase: testNullThrowableMessageLog took 0.002 sec
+Testcase: testTaskDefinitionContainsValue took 0.002 sec
+Testcase: testResolveFile took 0.001 sec
+
+.
+BUILD SUCCESSFUL
+```
+
+```
+............
+junit-single-test-only
+Testsuite: ..ProjectTest
+Tests run: 12, Failures: 1, Errors: 0, Skipped: 1, Time elapsed: 5.638 sec
+------------- Standard Output ---------------
+bar
+------------- ---------------- ---------------
+------------- Standard Error -----------------
+bar
+------------- ---------------- ---------------
+
+Testcase: testResolveFileWithDriveLetter took 0.033 sec
+	SKIPPED: Not DOS or Netware
+Testcase: testResolveFileWithDriveLetter took 0.035 sec
+Testcase: testInputHandler took 0.005 sec
+	FAILED
+expected null, but was:<..DefaultInputHandler@61dc03ce>
+junit.framework.AssertionFailedError: expected null, but was:<..DefaultInputHandler@61dc03ce>
+	at ..ProjectTest.testInputHandler(:254)
+
+Testcase: testAddTaskDefinition took 0.182 sec
+Testcase: testTaskDefinitionContainsKey took 0.003 sec
+Testcase: testDuplicateTargets took 0.043 sec
+Testcase: testResolveRelativeFile took 0.001 sec
+Testcase: testOutputDuringMessageLoggedIsSwallowed took 0.003 sec
+Testcase: testDataTypes took 0.161 sec
+Testcase: testDuplicateTargetsImport took 0.088 sec
+Testcase: testNullThrowableMessageLog took 0.001 sec
+Testcase: testTaskDefinitionContainsValue took 0.001 sec
+Testcase: testResolveFile took 0.001 sec
+Test ..ProjectTest FAILED
+
+.
+BUILD SUCCESSFUL
+```
+
+```
+...
+compile
+.../Project.java:65: error: cannot find symbol
+public class Project implements xResourceFactory {
+                                ^
+  symbol: class xResourceFactory
+.../Project.java:2483: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+2 errors
+
+BUILD FAILED
+```
+
+TODO: linesieve command breakdown

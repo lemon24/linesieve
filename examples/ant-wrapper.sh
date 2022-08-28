@@ -1,20 +1,11 @@
 #!/bin/sh
 
-# cd ../../ant
-
-# TODO
-#
-# sub \
-#     '^(?x:
-#         (?P<uptolineno> \s+ at \s+ (?! .+ \.\. ) .*? )
-#         \( .*
-#     )' \
-#     '\g<uptolineno>' \
+# make Apache Ant output more readable
 
 linesieve \
     --section '^(\S+):$' \
     --success 'BUILD SUCCESSFUL' \
-    --failure '(?:BUILD|Test .*) FAILED' \
+    --failure 'BUILD FAILED' \
 show junit-batch \
 show junit-single-test-only \
 sub-cwd \
@@ -26,7 +17,7 @@ push compile \
     match -v '^Ignoring source, target' \
 pop \
 push junit \
-    sub '^\s+\[junit] ' '' \
+    sub '^\s+\[junit] ?' '' \
     match-span -v \
         --start '^WARNING: multiple versions of ant' \
         --end '^Testsuite:' \
@@ -35,11 +26,8 @@ push junit \
     match-span -v \
         --start '^\s+at org.junit.(runners|rules|internal)' \
         --end '^(?!\s+at )' \
-    match --color -X '^
-        | FAILED
-        | ^ \w+ (\.\w+)+ (?= :\s )
-        ' \
 pop \
+sub -X '^( \s+ at \s+ (?! .+ \.\. ) .*? ) \( .*' '\1' \
 sub -X '
     (?P<pre> \s+ at \s .*)
     (?P<cls> \w+ )
@@ -48,4 +36,6 @@ sub -X '
     (?P<suf> : .* )
     ' \
     '\g<pre>\g<cls>\g<mid>\g<suf>' \
-"$@"
+sub --color -X '^( \w+ (\.\w+)+ (?= :\s ))' '\1' \
+sub --color -X '(FAILED)' '\1' \
+exec ant "$@"
