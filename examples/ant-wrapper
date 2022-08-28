@@ -1,0 +1,51 @@
+#!/bin/sh
+
+# cd ../../ant
+
+# TODO
+#
+# sub \
+#     '^(?x:
+#         (?P<uptolineno> \s+ at \s+ (?! .+ \.\. ) .*? )
+#         \( .*
+#     )' \
+#     '\g<uptolineno>' \
+
+linesieve \
+    --section '^(\S+):$' \
+    --success 'BUILD SUCCESSFUL' \
+    --failure '(?:BUILD|Test .*) FAILED' \
+show junit-batch \
+show junit-single-test-only \
+sub-cwd \
+sub-paths --include 'src/main/**/*.java' --modules-skip 2 \
+sub-paths --include 'src/tests/junit/**/*.java' --modules-skip 3 \
+sub -s compile '^\s+\[javac?] ' '' \
+push compile \
+    match -v '^Compiling \d source file' \
+    match -v '^Ignoring source, target' \
+pop \
+push junit \
+    sub '^\s+\[junit] ' '' \
+    match-span -v \
+        --start '^WARNING: multiple versions of ant' \
+        --end '^Testsuite:' \
+    match -v '^\s+at java\.\S+\.reflect\.' \
+    match -v '^\s+at org.junit.Assert' \
+    match-span -v \
+        --start '^\s+at org.junit.(runners|rules|internal)' \
+        --end '^(?!\s+at )' \
+    match --color -X '^
+        | FAILED
+        | ^ \w+ (\.\w+)+ (?= :\s )
+        ' \
+pop \
+sub -X '
+    (?P<pre> \s+ at \s .*)
+    (?P<cls> \w+ )
+    (?P<mid> .* \( )
+    (?P=cls) \.java
+    (?P<suf> : .* )
+    ' \
+    '\g<pre>\g<cls>\g<mid>\g<suf>' \
+"$@"

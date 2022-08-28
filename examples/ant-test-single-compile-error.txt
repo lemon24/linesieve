@@ -1,0 +1,22 @@
+Buildfile: /Users/lemon/code/ant/build.xml
+
+check-optional-packages:
+
+prepare:
+
+compile:
+    [javac] Compiling 1 source file to /Users/lemon/code/ant/build/classes
+    [javac] Ignoring source, target and bootclasspath as release has been set
+    [javac] /Users/lemon/code/ant/src/main/org/apache/tools/ant/Project.java:65: error: cannot find symbol
+    [javac] public class Project implements xResourceFactory {
+    [javac]                                 ^
+    [javac]   symbol: class xResourceFactory
+    [javac] /Users/lemon/code/ant/src/main/org/apache/tools/ant/Project.java:2483: error: method does not override or implement a method from a supertype
+    [javac]     @Override
+    [javac]     ^
+    [javac] 2 errors
+
+BUILD FAILED
+/Users/lemon/code/ant/build.xml:715: Compile failed; see the compiler error output for details.
+
+Total time: 4 seconds

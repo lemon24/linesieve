@@ -1,0 +1,77 @@
+Buildfile: /Users/lemon/code/ant/build.xml
+
+check-optional-packages:
+
+prepare:
+
+compile:
+
+compile-jdk9+:
+
+build:
+   [delete] Deleting directory /Users/lemon/code/ant/build/classes/org/apache/tools/ant/taskdefs/optional/junitlauncher/confined
+    [javac] Compiling 11 source files to /Users/lemon/code/ant/build/classes
+    [javac] Ignoring source, target and bootclasspath as release has been set
+    [javac] Creating empty /Users/lemon/code/ant/build/classes/org/apache/tools/ant/taskdefs/optional/junitlauncher/confined/package-info.class
+     [copy] Copying 2 files to /Users/lemon/code/ant/build/classes
+
+compile-tests:
+
+probe-offline:
+Following redirect from http://www.apache.org/ to https://www.apache.org/
+
+xml-check:
+
+dump-sys-properties:
+
+run-which:
+WARNING: A terminally deprecated method in java.lang.System has been called
+WARNING: System::setSecurityManager has been called by org.apache.tools.ant.types.Permissions (file:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant.jar)
+WARNING: Please consider reporting this to the maintainers of org.apache.tools.ant.types.Permissions
+WARNING: System::setSecurityManager will be removed in a future release
+    [which] #---- BEGIN: Which report
+    [which] java.class.path=/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-launcher.jar:/usr/local/share/ant:/usr/local/Cellar/ant/1.10.12/libexec/lib/bcel-6.5.0.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-commons-net.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-xz.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-junit4.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-jai.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-resolver.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-jdepend.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-regexp.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-log4j.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-javamail.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-bcel.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-netrexx.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-swing.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-jsch.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-junitlauncher.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ivy-2.5.0.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-junit.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-imageio.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-launcher.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-antlr.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-testutil.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-oro.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-jmf.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-xalan2.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-apache-bsf.jar:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant-commons-logging.jar
+    [which] java.version=17.0.1
+    [which] Which.version=Which.java:($Revision: 1.2 $) WhichJar.java:($Revision: 1.2 $)
+    [which] java.vendor=Homebrew
+    [which] java.runtime.name=OpenJDK Runtime Environment
+    [which] file.encoding=UTF-8
+    [which] os.name=Mac OS X
+    [which] #----   END: Which report
+
+dump-info:
+
+test-init:
+
+junit-single-test-only:
+    [junit] WARNING: multiple versions of ant detected in path for junit
+    [junit]          file:/Users/lemon/code/ant/build/classes/org/apache/tools/ant/Project.class
+    [junit]      and jar:file:/usr/local/Cellar/ant/1.10.12/libexec/lib/ant.jar!/org/apache/tools/ant/Project.class
+    [junit] Testsuite: org.apache.tools.ant.ProjectTest
+    [junit] Tests run: 12, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 5.635 sec
+    [junit] ------------- Standard Output ---------------
+    [junit] bar
+    [junit] ------------- ---------------- ---------------
+    [junit] ------------- Standard Error -----------------
+    [junit] bar
+    [junit] ------------- ---------------- ---------------
+    [junit]
+    [junit] Testcase: testResolveFileWithDriveLetter took 0.034 sec
+    [junit] 	SKIPPED: Not DOS or Netware
+    [junit] Testcase: testResolveFileWithDriveLetter took 0.036 sec
+    [junit] Testcase: testInputHandler took 0.007 sec
+    [junit] Testcase: testAddTaskDefinition took 0.179 sec
+    [junit] Testcase: testTaskDefinitionContainsKey took 0.002 sec
+    [junit] Testcase: testDuplicateTargets took 0.05 sec
+    [junit] Testcase: testResolveRelativeFile took 0.002 sec
+    [junit] Testcase: testOutputDuringMessageLoggedIsSwallowed took 0.002 sec
+    [junit] Testcase: testDataTypes took 0.154 sec
+    [junit] Testcase: testDuplicateTargetsImport took 0.086 sec
+    [junit] Testcase: testNullThrowableMessageLog took 0.002 sec
+    [junit] Testcase: testTaskDefinitionContainsValue took 0.002 sec
+    [junit] Testcase: testResolveFile took 0.001 sec
+
+junit-single-test:
+
+BUILD SUCCESSFUL
+Total time: 12 seconds

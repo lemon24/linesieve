@@ -1,0 +1,13 @@
+diff --git a/src/tests/junit/org/apache/tools/ant/ProjectTest.java b/src/tests/junit/org/apache/tools/ant/ProjectTest.java
+index 885e5aab4..1e3149edb 100644
+--- a/src/tests/junit/org/apache/tools/ant/ProjectTest.java
++++ b/src/tests/junit/org/apache/tools/ant/ProjectTest.java
+@@ -251,7 +251,7 @@ public class ProjectTest {
+     @Test
+     public void testInputHandler() {
+         InputHandler ih = p.getInputHandler();
+-        assertNotNull(ih);
++        assertNull(ih);
+         assertThat(ih, instanceOf(DefaultInputHandler.class));
+         InputHandler pfih = new PropertyFileInputHandler();
+         p.setInputHandler(pfih);
