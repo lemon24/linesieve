@@ -44,15 +44,10 @@ def make_pipeline(
     return groups
 
 
-MATCH_NOTHING = '$nothing'
+MATCH_NOTHING_RE = re.compile('$nothing')
 
 
-def annotate_lines(
-    lines,
-    section_pattern=None,
-    success_pattern=None,
-    failure_pattern=None,
-):
+def annotate_lines(lines, section_re=None, success_re=None, failure_re=None):
     """Annotate lines with their corresponding section.
     Stop when encountering a success/failure marker.
 
@@ -75,7 +70,7 @@ def annotate_lines(
     * the entire match, otherwise
 
     >>> lines = ['0', 'one:', '1', 'two:', 'three:', '3', 'end']
-    >>> list(annotate_lines(lines, '(.*):$', 'end'))
+    >>> list(annotate_lines(lines, re.compile('(.*):$'), re.compile('end')))
     [('', '0'), ('one', '1'), ('two', None), ('three', '3'), (True, 'end')]
 
     >>> list(annotate_lines([]))
@@ -83,8 +78,8 @@ def annotate_lines(
 
     """
     section_re, success_re, failure_re = [
-        re.compile(pattern if pattern is not None else MATCH_NOTHING)
-        for pattern in (section_pattern, success_pattern, failure_pattern)
+        pattern if pattern is not None else MATCH_NOTHING_RE
+        for pattern in (section_re, success_re, failure_re)
     ]
 
     done = False

@@ -1,11 +1,14 @@
 import os.path
 import re
 import subprocess
+from contextlib import contextmanager
 from functools import wraps
 
 import click
+from click import BadParameter
 from click import echo
 from click import style
+from click import UsageError
 
 import linesieve
 from .parsing import make_pipeline
@@ -96,6 +99,16 @@ def list_commands_recursive(self, ctx, path=()):
         yield from list_commands_recursive(cmd, ctx, path)
 
 
+@contextmanager
+def handle_re_error(param_hint):
+    if isinstance(param_hint, str):
+        param_hint = [param_hint]
+    try:
+        yield
+    except re.error as e:
+        raise BadParameter(f"{e}: {e.pattern!r}", param_hint=param_hint)
+
+
 @click.group(
     name='linesieve',
     chain=True,
@@ -139,6 +152,16 @@ def cli(ctx, **kwargs):
 @cli.result_callback()
 @click.pass_context
 def process_pipeline(ctx, processors, section, success, failure):
+    if section is not None:
+        with handle_re_error('--section'):
+            section = re.compile(section)
+    if success is not None:
+        with handle_re_error('--success'):
+            success = re.compile(success)
+    if failure is not None:
+        with handle_re_error('--failure'):
+            failure = re.compile(failure)
+
     file = ctx.obj.get('file')
     if not file:
         file = click.get_text_stream('stdin')
@@ -208,7 +231,7 @@ def process_pipeline(ctx, processors, section, success, failure):
     ctx.exit(returncode)
 
     # TODO before 1.0:
-    # pattern compilation error messages
+    # --version
     # bugbear?
     # TODO after 1.0:
     # hide section
@@ -288,8 +311,8 @@ def open(obj, file):
 @cli.command(short_help="Read input from command.")
 @click.argument('command')
 @click.argument('argument', nargs=-1)
-@click.pass_context
-def exec(ctx, command, argument):
+@click.pass_obj
+def exec(obj, command, argument):
     """Execute COMMAND and use its output as input.
 
     Roughly equivalent to: COMMAND | linesieve
@@ -297,15 +320,17 @@ def exec(ctx, command, argument):
     If the command finishes, exit with its status code.
 
     """
-    obj = ctx.obj
     if obj.get('file'):
-        ctx.fail("exec and open are mutually exclusive")
-    process = subprocess.Popen(
-        (command,) + argument,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
+        raise UsageError("exec and open are mutually exclusive")
+    try:
+        process = subprocess.Popen(
+            (command,) + argument,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    except OSError as e:
+        raise BadParameter(e, param_hint='COMMAND')
     obj['process'] = process
     obj['file'] = process.stdout
 
@@ -340,12 +365,9 @@ def pattern_argument(fn):
     @pattern_options
     @wraps(fn)
     def wrapper(*args, pattern, fixed_strings, ignore_case, verbose, **kwargs):
-        return fn(
-            *args,
-            pattern=compile_pattern(pattern, fixed_strings, ignore_case, verbose),
-            fixed_strings=fixed_strings,
-            **kwargs,
-        )
+        with handle_re_error('PATTERN'):
+            pattern_re = compile_pattern(pattern, fixed_strings, ignore_case, verbose)
+        return fn(*args, pattern=pattern_re, fixed_strings=fixed_strings, **kwargs)
 
     return wrapper
 
@@ -398,17 +420,17 @@ def push(obj, pattern, fixed_strings):
 @click.option(
     '-a', '--all', is_flag=True, help="Remove all the patterns from the stack."
 )
-@click.pass_context
-def pop(ctx, all):
+@click.pass_obj
+def pop(obj, all):
     """Pop patterns off the section stack. See 'push' for details.
 
     With no arguments, removes the top pattern from the stack.
 
     """
-    stack = ctx.obj.setdefault('section_stack', [])
+    stack = obj.setdefault('section_stack', [])
     if not all:
         if not stack:
-            raise ctx.fail('nothing to pop')
+            raise UsageError('nothing to pop')
         stack.pop()
     else:
         stack.clear()
@@ -434,7 +456,8 @@ def section_option(fn):
         ctx = click.get_current_context()
         section_res = list(ctx.obj.setdefault('section_stack', []))
         if section is not None:
-            section_res.append(re.compile(section))
+            with handle_re_error('--section'):
+                section_res.append(re.compile(section))
 
         return section_res, rv
 
@@ -567,10 +590,13 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
 
     # TODO: should start/end be arguments? hard to do if we want them to be optional
 
-    start_re = (
-        compile_pattern(start, fixed_strings, ignore_case, verbose) if start else None
-    )
-    end_re = compile_pattern(end, fixed_strings, ignore_case, verbose) if end else None
+    start_re = end_re = None
+    if start:
+        with handle_re_error('--start'):
+            start_re = compile_pattern(start, fixed_strings, ignore_case, verbose)
+    if end:
+        with handle_re_error('--end'):
+            end_re = compile_pattern(end, fixed_strings, ignore_case, verbose)
 
     empty_match = re.search('.*', '')
 
@@ -669,15 +695,16 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
 
     """
     from glob import glob
-    from braceexpand import braceexpand
+    from braceexpand import braceexpand, UnbalancedBracesError
     from .paths import shorten_paths, paths_to_modules, make_file_paths_re
 
-    paths = [
-        path
-        for unexpanded_pattern in include
-        for pattern in braceexpand(unexpanded_pattern)
-        for path in glob(pattern, recursive=True)
-    ]
+    paths = []
+    try:
+        for unexpanded_pattern in include:
+            for pattern in braceexpand(unexpanded_pattern):
+                paths.extend(glob(pattern, recursive=True))
+    except UnbalancedBracesError as e:
+        raise BadParameter(e, param_hint=['--include'])
 
     replacements = shorten_paths(paths, os.sep, '...')
 
@@ -943,7 +970,8 @@ def split(
 
     else:
         # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
-        pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
+        with handle_re_error('--delimiter'):
+            pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
         max_split = max_split or 0
 
         def split(line):
