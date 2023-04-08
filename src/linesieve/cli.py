@@ -247,22 +247,6 @@ def process_pipeline(ctx, processors, section, success, failure):
 
     ctx.exit(returncode)
 
-    # TODO before 1.0:
-    # do not sort commands?
-    # bugbear?
-    # TODO after 1.0:
-    # hide section
-    # match -e pattern -e pattern (hard to do with click while keeping arg)
-    # match-span -s ... -s ..s
-    # print last section without --failure if exec exits with non-zero (how?)
-    # exec time
-    # collapse any repeated lines
-    # runfilter "grep pattern"
-    # short command aliases (four-letter ones)
-    # make dedupe_blank_lines optional
-    # match replace spans of skipped lines with ... (match span already does this)
-    # section -s pattern section --include pattern (tried it, not necessarily better)
-
 
 def output_sections(groups, section_dot='.'):
     """Print (section, lines) pairs in a fancy way.
