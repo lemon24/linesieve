@@ -22,22 +22,23 @@ from .parsing import make_pipeline
 
 def color_help(text):
     KWARGS = {
-        'd': dict(dim=True),
-        'r': dict(fg='red'),
-        'g': dict(fg='green'),
-        'y': dict(fg='yellow'),
+        'dim': dict(dim=True),
+        'red': dict(fg='red'),
+        'green': dict(fg='green'),
+        'yellow': dict(fg='yellow'),
     }
 
     def repl(match):
-        options, line = match.groups()
+        line, options = match.groups()
         kwargs = {}
-        for option in options:
-            if option == '\b':
-                continue
+        for option in options.split():
             kwargs.update(KWARGS[option])
         return style(line, **kwargs)
 
-    return re.sub('([drgy]\b)(.*)', repl, text)
+    options_re = '|'.join(map(re.escape, KWARGS))
+    line_re = f"(.*)#((?: +(?:{options_re}))+ *)$"
+
+    return re.sub(line_re, repl, text, flags=re.M)
 
 
 def help_all_option():

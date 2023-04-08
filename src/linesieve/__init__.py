@@ -25,12 +25,12 @@ Example:
   > show --ignore-case ^O \\
   > match --section one --only-matching '\\d+' \\
   > sub '([a-z])' '\\1\\1\\1'
-  d\bone
+  one  # dim
   1
-  d\b..
-  d\bthree
+  ..  # dim
+  three  # dim
   3, ttthhhrrreeeeee
-  r\bfail
+  fail  # red
 
 """
 

@@ -1,7 +1,6 @@
 
 Before 1.0:
 
-* [ ] color_help() should use "# dim" comments instead
 * [ ] "linesieve --help" should not show examples
 * [ ] idem should mention "use subcommands to filter output"
 * [ ] "linesieve help" should have examples
