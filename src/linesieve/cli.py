@@ -186,6 +186,9 @@ def process_pipeline(ctx, processors, section, success, failure):
     if not file:
         file = click.get_text_stream('stdin')
 
+    if file.isatty():
+        echo(style("linesieve: reading from terminal", dim=True), err=True)
+
     process = ctx.obj.get('process')
     show = ctx.obj.get('show')
 
