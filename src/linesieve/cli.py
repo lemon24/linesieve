@@ -122,6 +122,9 @@ class CLIGroup(click.Group):
         with formatter.section('Further help'):
             formatter.write_text(FURTHER_HELP)
 
+    def list_commands(self, ctx):
+        return self.commands
+
 
 @click.group(
     name='linesieve',
@@ -294,6 +297,9 @@ def output_sections(groups, section_dot='.'):
         prev_section = section
 
 
+# INPUT
+
+
 @cli.command(short_help="Read input from file.")
 @click.argument('file', type=click.File('r', lazy=True))
 @click.pass_obj
@@ -384,6 +390,9 @@ def compile_pattern(pattern, fixed_strings, ignore_case, verbose):
     return re.compile(pattern, flags)
 
 
+# SECTION CONTROL
+
+
 @cli.command(short_help="Show selected sections.")
 @pattern_argument
 @click.pass_obj
@@ -463,95 +472,81 @@ def section_option(fn):
     return wrapper
 
 
-@cli.command(short_help="Replace pattern.")
-@pattern_argument
-@click.argument('repl')
-@click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
-@click.option('--color', is_flag=True, help="Color replacements.")
+# LINE RANGES
+
+
+@cli.command(short_help="Output the first part of sections.")
+@click.option(
+    '-n',
+    'count',
+    metavar="COUNT",
+    type=int,
+    default=10,
+    show_default=True,
+    help="Print the first COUNT lines. "
+    "With a leading '-', print all but the last COUNT lines.",
+)
 @section_option
-def sub(pattern, repl, fixed_strings, only_matching, color):
-    """Replace PATTERN matches with REPL.
+def head(count):
+    """Print the first COUNT lines.
 
-    Roughly equivalent to: sed 's/PATTERN/REPL/g'
-
-    Works like re.sub() in Python.
+    Roughly equivalent to: head -n COUNT
 
     """
-    if fixed_strings:
-        repl = repl.replace('\\', r'\\')
-    if color:
-        repl = style(repl, fg='red')
+    from itertools import islice
 
-    def sub(line):
-        line, subn = pattern.subn(repl, line)
-        if only_matching and not subn:
-            return None
-        return line
-
-    return sub
-
-
-@cli.command(short_help="Search for pattern.")
-@pattern_argument
-@click.option(
-    '-o',
-    '--only-matching',
-    is_flag=True,
-    help="""
-    Output only the matching part of the line, one match per line.
-    Works like re.findall() in Python:
-    if there are no groups, output the entire match;
-    if there is one group, output the group;
-    if there are multiple groups, output all of them (tab-separated).
-    """,
-)
-@click.option(
-    '-v',
-    '--invert-match',
-    is_flag=True,
-    help="Output only lines *not* matching the pattern.",
-)
-@click.option('--color', is_flag=True, help="Color matches.")
-@section_option
-@click.pass_context
-def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
-    """Output only lines matching PATTERN.
-
-    Roughly equivalent to: grep PATTERN
-
-    Works like re.search() in Python.
-
-    """
-
-    if color and not invert_match and not only_matching:
-        return ctx.invoke(
-            sub,
-            pattern=pattern,
-            repl=r'\g<0>',
-            # pattern is already escaped
-            fixed_strings=False,
-            only_matching=True,
-            color=color,
-        )[1]
-
-    def search(line):
-        if not only_matching:
-            if bool(pattern.search(line)) is not invert_match:
-                return line
-            return None
+    def head(lines):
+        if count >= 0:
+            return islice(lines, count)
         else:
-            matches = pattern.findall(line)
-            if matches:
-                lines = []
-                for match in matches:
-                    groups = (match,) if isinstance(match, str) else match
-                    if color:
-                        groups = [style(g, fg='red') for g in groups]
-                    lines.append('\t'.join(groups))
-                return '\n'.join(lines)
-            return None
+            # TODO: don't read in memory, use a temporary file
+            return iter(list(lines)[0:count])
 
-    return search
+    head.is_iter = True
+    return head
+
+
+def tail_count_int(value):
+    value = value.strip()
+    if value.startswith('+'):
+        rv = int(value) - 1
+    elif value.startswith('-'):
+        rv = int(value)
+    else:
+        rv = -int(value)
+    return rv
+
+
+@cli.command(short_help="Output the last part of sections.")
+@click.option(
+    '-n',
+    'count',
+    metavar="COUNT",
+    type=tail_count_int,
+    default=10,
+    show_default=True,
+    help="Print the last COUNT lines. "
+    "With a leading '+', print lines starting with line COUNT.",
+)
+@section_option
+def tail(count):
+    """Print the last COUNT lines.
+
+    Roughly equivalent to: tail -n COUNT
+
+    """
+    from itertools import islice
+    from collections import deque
+
+    def tail(lines):
+        if count <= 0:
+            # TODO: don't read in memory, use a temporary file
+            return iter(deque(lines, maxlen=-count))
+        else:
+            return islice(lines, count, None)
+
+    tail.is_iter = True
+    return tail
 
 
 @cli.command(short_help="Output matching line spans.")
@@ -628,6 +623,239 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
 
     match_span.is_iter = True
     return match_span
+
+
+# LINE FILTERS
+
+
+@cli.command(short_help="Search for pattern.")
+@pattern_argument
+@click.option(
+    '-o',
+    '--only-matching',
+    is_flag=True,
+    help="""
+    Output only the matching part of the line, one match per line.
+    Works like re.findall() in Python:
+    if there are no groups, output the entire match;
+    if there is one group, output the group;
+    if there are multiple groups, output all of them (tab-separated).
+    """,
+)
+@click.option(
+    '-v',
+    '--invert-match',
+    is_flag=True,
+    help="Output only lines *not* matching the pattern.",
+)
+@click.option('--color', is_flag=True, help="Color matches.")
+@section_option
+@click.pass_context
+def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
+    """Output only lines matching PATTERN.
+
+    Roughly equivalent to: grep PATTERN
+
+    Works like re.search() in Python.
+
+    """
+
+    if color and not invert_match and not only_matching:
+        return ctx.invoke(
+            sub,
+            pattern=pattern,
+            repl=r'\g<0>',
+            # pattern is already escaped
+            fixed_strings=False,
+            only_matching=True,
+            color=color,
+        )[1]
+
+    def search(line):
+        if not only_matching:
+            if bool(pattern.search(line)) is not invert_match:
+                return line
+            return None
+        else:
+            matches = pattern.findall(line)
+            if matches:
+                lines = []
+                for match in matches:
+                    groups = (match,) if isinstance(match, str) else match
+                    if color:
+                        groups = [style(g, fg='red') for g in groups]
+                    lines.append('\t'.join(groups))
+                return '\n'.join(lines)
+            return None
+
+    return search
+
+
+def split_field_slices(value):
+    rv = []
+    for slice_str in value.split(','):
+        parts = slice_str.split('-')
+
+        if len(parts) == 1:
+            start = stop = int(parts[0])
+        elif len(parts) == 2:
+            start = int(parts[0]) if parts[0] else None
+            stop = int(parts[1]) if parts[1] else None
+        else:
+            raise ValueError
+
+        if start is None and stop is None:
+            raise ValueError
+        if start is not None and stop is not None:
+            if start > stop:
+                raise ValueError
+        if start is not None:
+            if start < 1:
+                raise ValueError
+            start -= 1
+        if stop is not None:
+            if stop < 1:
+                raise ValueError
+
+        rv.append(slice(start, stop))
+
+    return rv
+
+
+@cli.command(short_help="Output selected parts of lines.")
+@click.option(
+    '-d',
+    '--delimiter',
+    metavar='PATTERN',
+    help="Use as field delimiter (consecutive delimiters delimit empty strings). "
+    "If not given, use runs of whitespace as a delimiter "
+    "(with leading/trailing whitespace stripped first).",
+)
+@pattern_options
+@click.option(
+    '-n',
+    '--max-split',
+    metavar="INTEGER",
+    type=click.IntRange(1),
+    help="Maximum number of splits to do. The default is no limit.",
+)
+@click.option(
+    '-f',
+    '--fields',
+    type=split_field_slices,
+    metavar='LIST',
+    help="Select only these fields.",
+)
+@click.option(
+    '-D',
+    '--output-delimiter',
+    show_default=True,
+    help="Use as the output field delimiter. "
+    "If not given, and --delimiter and --fixed-strings are given, "
+    "use the input delimiter. Otherwise, use one tab character.",
+)
+@section_option
+def split(
+    delimiter, fixed_strings, ignore_case, verbose, max_split, fields, output_delimiter
+):
+    """Print selected parts of lines.
+
+    Roughly equivalent to:
+
+    \b
+      awk '{ print ... }'     (no --delimiter)
+      cut -d delim            (--fixed-strings --delimiter delim)
+
+    Python equivalents:
+
+    \b
+      line.split()            (no --delimiter)
+      line.split(delim)       (--fixed-strings --delimiter delim)
+      re.split(delim, line)   (--delimiter delim)
+
+    --fields takes a comma-separated list of ranges, each range one of:
+
+    \b
+      N     Nth field, counted from 1
+      N-    from Nth field to end of line
+      N-M   from Nth to Mth (included) field
+       -M   from first to Mth (included) field
+
+    This is the same as the cut command. Unlike cut,
+    selected fields are printed in the order from the list,
+    and more than once, if repeated.
+
+    """
+    if delimiter is None or (fixed_strings and not ignore_case):
+        max_split = max_split or -1
+
+        def split(line):
+            return line.split(delimiter, max_split)
+
+    else:
+        # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
+        with handle_re_error('--delimiter'):
+            pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
+        max_split = max_split or 0
+
+        def split(line):
+            return pattern.split(line, max_split)
+
+    if not output_delimiter:
+        if fixed_strings:
+            output_delimiter = delimiter
+        else:
+            output_delimiter = '\t'
+
+    if not fields:
+        join = output_delimiter.join
+    else:
+
+        def join(parts):
+            return output_delimiter.join(
+                p for field_slice in fields for p in parts[field_slice]
+            )
+
+    def processor(line):
+        return join(split(line))
+
+    return processor
+
+    # TODO:
+    # -s, --only-delimited
+    # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
+    #   ...this requires a custom string.Formatter that coerces string arguments
+
+
+@cli.command(short_help="Replace pattern.")
+@pattern_argument
+@click.argument('repl')
+@click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
+@click.option('--color', is_flag=True, help="Color replacements.")
+@section_option
+def sub(pattern, repl, fixed_strings, only_matching, color):
+    """Replace PATTERN matches with REPL.
+
+    Roughly equivalent to: sed 's/PATTERN/REPL/g'
+
+    Works like re.sub() in Python.
+
+    """
+    if fixed_strings:
+        repl = repl.replace('\\', r'\\')
+    if color:
+        repl = style(repl, fg='red')
+
+    def sub(line):
+        line, subn = pattern.subn(repl, line)
+        if only_matching and not subn:
+            return None
+        return line
+
+    return sub
+
+
+# SPECIALIZED FILTERS
 
 
 @cli.command(short_help="Shorten paths of existing files.")
@@ -789,213 +1017,3 @@ def sub_link(link):
         return pattern_re.sub(repl, line)
 
     return sub_link
-
-
-@cli.command(short_help="Output the first part of sections.")
-@click.option(
-    '-n',
-    'count',
-    metavar="COUNT",
-    type=int,
-    default=10,
-    show_default=True,
-    help="Print the first COUNT lines. "
-    "With a leading '-', print all but the last COUNT lines.",
-)
-@section_option
-def head(count):
-    """Print the first COUNT lines.
-
-    Roughly equivalent to: head -n COUNT
-
-    """
-    from itertools import islice
-
-    def head(lines):
-        if count >= 0:
-            return islice(lines, count)
-        else:
-            # TODO: don't read in memory, use a temporary file
-            return iter(list(lines)[0:count])
-
-    head.is_iter = True
-    return head
-
-
-def tail_count_int(value):
-    value = value.strip()
-    if value.startswith('+'):
-        rv = int(value) - 1
-    elif value.startswith('-'):
-        rv = int(value)
-    else:
-        rv = -int(value)
-    return rv
-
-
-@cli.command(short_help="Output the last part of sections.")
-@click.option(
-    '-n',
-    'count',
-    metavar="COUNT",
-    type=tail_count_int,
-    default=10,
-    show_default=True,
-    help="Print the last COUNT lines. "
-    "With a leading '+', print lines starting with line COUNT.",
-)
-@section_option
-def tail(count):
-    """Print the last COUNT lines.
-
-    Roughly equivalent to: tail -n COUNT
-
-    """
-    from itertools import islice
-    from collections import deque
-
-    def tail(lines):
-        if count <= 0:
-            # TODO: don't read in memory, use a temporary file
-            return iter(deque(lines, maxlen=-count))
-        else:
-            return islice(lines, count, None)
-
-    tail.is_iter = True
-    return tail
-
-
-def split_field_slices(value):
-    rv = []
-    for slice_str in value.split(','):
-        parts = slice_str.split('-')
-
-        if len(parts) == 1:
-            start = stop = int(parts[0])
-        elif len(parts) == 2:
-            start = int(parts[0]) if parts[0] else None
-            stop = int(parts[1]) if parts[1] else None
-        else:
-            raise ValueError
-
-        if start is None and stop is None:
-            raise ValueError
-        if start is not None and stop is not None:
-            if start > stop:
-                raise ValueError
-        if start is not None:
-            if start < 1:
-                raise ValueError
-            start -= 1
-        if stop is not None:
-            if stop < 1:
-                raise ValueError
-
-        rv.append(slice(start, stop))
-
-    return rv
-
-
-@cli.command(short_help="Output selected parts of lines.")
-@click.option(
-    '-d',
-    '--delimiter',
-    metavar='PATTERN',
-    help="Use as field delimiter (consecutive delimiters delimit empty strings). "
-    "If not given, use runs of whitespace as a delimiter "
-    "(with leading/trailing whitespace stripped first).",
-)
-@pattern_options
-@click.option(
-    '-n',
-    '--max-split',
-    metavar="INTEGER",
-    type=click.IntRange(1),
-    help="Maximum number of splits to do. The default is no limit.",
-)
-@click.option(
-    '-f',
-    '--fields',
-    type=split_field_slices,
-    metavar='LIST',
-    help="Select only these fields.",
-)
-@click.option(
-    '-D',
-    '--output-delimiter',
-    show_default=True,
-    help="Use as the output field delimiter. "
-    "If not given, and --delimiter and --fixed-strings are given, "
-    "use the input delimiter. Otherwise, use one tab character.",
-)
-@section_option
-def split(
-    delimiter, fixed_strings, ignore_case, verbose, max_split, fields, output_delimiter
-):
-    """Print selected parts of lines.
-
-    Roughly equivalent to:
-
-    \b
-      awk '{ print ... }'     (no --delimiter)
-      cut -d delim            (--fixed-strings --delimiter delim)
-
-    Python equivalents:
-
-    \b
-      line.split()            (no --delimiter)
-      line.split(delim)       (--fixed-strings --delimiter delim)
-      re.split(delim, line)   (--delimiter delim)
-
-    --fields takes a comma-separated list of ranges, each range one of:
-
-    \b
-      N     Nth field, counted from 1
-      N-    from Nth field to end of line
-      N-M   from Nth to Mth (included) field
-       -M   from first to Mth (included) field
-
-    This is the same as the cut command. Unlike cut,
-    selected fields are printed in the order from the list,
-    and more than once, if repeated.
-
-    """
-    if delimiter is None or (fixed_strings and not ignore_case):
-        max_split = max_split or -1
-
-        def split(line):
-            return line.split(delimiter, max_split)
-
-    else:
-        # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
-        with handle_re_error('--delimiter'):
-            pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
-        max_split = max_split or 0
-
-        def split(line):
-            return pattern.split(line, max_split)
-
-    if not output_delimiter:
-        if fixed_strings:
-            output_delimiter = delimiter
-        else:
-            output_delimiter = '\t'
-
-    if not fields:
-        join = output_delimiter.join
-    else:
-
-        def join(parts):
-            return output_delimiter.join(
-                p for field_slice in fields for p in parts[field_slice]
-            )
-
-    def processor(line):
-        return join(split(line))
-
-    return processor
-
-    # TODO:
-    # -s, --only-delimited
-    # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
-    #   ...this requires a custom string.Formatter that coerces string arguments

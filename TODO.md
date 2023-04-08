@@ -5,7 +5,7 @@ Before 1.0:
 * [ ] "linesieve --help" should not show examples
 * [ ] idem should mention "use subcommands to filter output"
 * [ ] "linesieve help" should have examples
-* [ ] do not sort commands?
+* [ ] s/match-span/span/
 * [ ] readme
   * [ ] no backticks for "grep, sed, awk"?
   * [ ] TODO: specific filters
