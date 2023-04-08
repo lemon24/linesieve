@@ -1,0 +1,114 @@
+--section '(\S+):$'
+span -s ^simple$ --start 2 --end 4
+span -s ^simple-invert$ --start 2 --end 4 -v
+span -s ^no-end$ --start 2
+span -s ^no-end-invert$ --start 2 -v
+span -s ^no-start$ --end 4
+span -s ^no-start-invert$ --end 4 -v
+span -s ^repl$ --start 2 --end 4 --repl ...
+span -s ^repl-invert$ --start 2 --end 4 --repl ... -v
+span -s ^repl-edges$ --start 1 --end 5 --repl ...
+span -s ^repl-invert-one$ --start 2 --end 3 --repl ... -v
+span -s ^repl-no-end$ --start 2  --repl ...
+span -s ^repl-two-ends$ --start 3 --end [45] --repl ...
+span -s ^repl-invert-two-starts$ --start [23] --end 5 --repl ... -v
+span -s ^repl-capture$ --start '(2)' --end 4 --repl '>\\<'
+span -s ^repl-invert-capture$ --start '(2)' --end 4 --repl '>\1<' -v
+
+---
+simple:
+1
+2
+3
+4
+5
+simple-invert:
+1
+2
+3
+4
+5
+no-end:
+1
+2
+3
+4
+5
+no-end-invert:
+1
+2
+3
+4
+5
+no-start:
+1
+2
+3
+4
+5
+no-start-invert:
+1
+2
+3
+4
+5
+repl:
+1
+2
+3
+4
+5
+repl-invert:
+1
+2
+3
+4
+5
+repl-edges:
+1
+2
+3
+4
+5
+repl-invert-one:
+1
+2
+3
+4
+5
+repl-no-end:
+1
+2
+3
+4
+5
+repl-no-start-invert:
+1
+2
+3
+4
+5
+repl-two-ends:
+1
+2
+3
+4
+5
+repl-invert-two-starts:
+1
+2
+3
+4
+5
+repl-capture:
+1
+2
+3
+4
+5
+repl-invert-capture:
+1
+2
+3
+4
+5

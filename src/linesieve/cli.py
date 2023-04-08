@@ -571,7 +571,7 @@ def tail(count):
     """,
 )
 @section_option
-def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
+def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
     """Output only lines between those matching --start and --end.
 
     Roughly equivalent to: grep START -A9999 | grep END -B9999 | head -n-1

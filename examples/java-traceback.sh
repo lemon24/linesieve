@@ -2,7 +2,7 @@
 # make Java tracebacks more readable
 
 linesieve \
-match-span -v -X \
+span -v -X \
     --start '^ (\s+) at \s ( org\.junit\. | \S+ \. reflect\.\S+\.invoke )' \
     --end '^ (?! \s+ at \s )' \
     --repl '\1...' \

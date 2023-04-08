@@ -89,7 +89,7 @@ This command:
 
 ```bash
 linesieve \
-match-span -v -X \
+span -v -X \
     --start '^ (\s+) at \s ( org\.junit\. | \S+ \. reflect\.\S+\.invoke )' \
     --end '^ (?! \s+ at \s )' \
     --repl '\1...' \
@@ -139,7 +139,7 @@ java.lang.RuntimeException: listener failed
 
 Let's break that linesieve command down a bit:
 
-* The `match-span` gets rid of all the traceback lines coming from JUnit.
+* The `span` gets rid of all the traceback lines coming from JUnit.
 * The `sub-paths` shortens and highlights the names of classes in the current project;
   `com.example.someproject.somepackage.ThingDoer` becomes `..ThingDoer`
   (presumably that's enough info to open the file).
@@ -225,12 +225,12 @@ push compile \
 pop \
 push junit \
     sub '^\s+\[junit] ?' '' \
-    match-span -v \
+    span -v \
         --start '^WARNING: multiple versions of ant' \
         --end '^Testsuite:' \
     match -v '^\s+at java\.\S+\.reflect\.' \
     match -v '^\s+at org.junit.Assert' \
-    match-span -v \
+    span -v \
         --start '^\s+at org.junit.(runners|rules|internal)' \
         --end '^(?!\s+at )' \
 pop \

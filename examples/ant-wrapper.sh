@@ -18,12 +18,12 @@ push compile \
 pop \
 push junit \
     sub '^\s+\[junit] ?' '' \
-    match-span -v \
+    span -v \
         --start '^WARNING: multiple versions of ant' \
         --end '^Testsuite:' \
     match -v '^\s+at java\.\S+\.reflect\.' \
     match -v '^\s+at org.junit.Assert' \
-    match-span -v \
+    span -v \
         --start '^\s+at org.junit.(runners|rules|internal)' \
         --end '^(?!\s+at )' \
 pop \

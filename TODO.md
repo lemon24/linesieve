@@ -5,7 +5,6 @@ Before 1.0:
 * [ ] "linesieve --help" should not show examples
 * [ ] idem should mention "use subcommands to filter output"
 * [ ] "linesieve help" should have examples
-* [ ] s/match-span/span/
 * [ ] readme
   * [ ] no backticks for "grep, sed, awk"?
   * [ ] TODO: specific filters
@@ -29,3 +28,4 @@ After 1.0:
 * make dedupe_blank_lines optional
 * match replace spans of skipped lines with ... (match span already does this)
 * section -s pattern section --include pattern (tried it, not necessarily better)
+* a way to reuse pre-configured commands
