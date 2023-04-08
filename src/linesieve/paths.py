@@ -8,10 +8,8 @@ def shorten_paths(paths, sep, ellipsis):
     _do_end(shortened.values(), 0, -1)
 
     for original, mask in shortened.items():
-
         path = []
         for ps, ms in zip(original.split(sep), mask):
-
             if ms is None:
                 path.append(ps)
             else:

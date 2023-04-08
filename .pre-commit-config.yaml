@@ -1,25 +1,25 @@
 repos:
 
   - repo: https://github.com/asottile/reorder_python_imports
-    rev: v3.0.1
+    rev: v3.9.0
     hooks:
       - id: reorder-python-imports
         name: Reorder Python imports (src, tests)
         args: ["--application-directories", ".:src"]
 
   - repo: https://github.com/python/black
-    rev: 22.3.0
+    rev: 23.3.0
     hooks:
       - id: black
         args: ["-S"]
 
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
     hooks:
       - id: flake8
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.4.0
     hooks:
       - id: check-byte-order-marker
       - id: trailing-whitespace

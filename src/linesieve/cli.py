@@ -21,7 +21,6 @@ from .parsing import make_pipeline
 
 
 def color_help(text):
-
     KWARGS = {
         'd': dict(dim=True),
         'r': dict(fg='red'),
@@ -266,7 +265,6 @@ def output_sections(groups, section_dot='.'):
     last_was_dot = False
 
     for section, lines in groups:
-
         if section == '' and prev_section is not None:
             echo(style(section_dot, dim=True), err=True, nl=False)
             last_was_dot = True
@@ -620,7 +618,6 @@ def match_span(start, end, fixed_strings, ignore_case, verbose, invert_match, re
             if invert_match != in_span:
                 yield line
             elif repl is not None and in_span_changed:
-
                 if invert_match and start_match:
                     repl_match = start_match
                 else:
