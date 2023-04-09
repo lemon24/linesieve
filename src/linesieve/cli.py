@@ -52,7 +52,7 @@ class CLIGroup(click.Group):
     metavar='PATTERN',
     help="""
     Consider matching lines the start of a new section.
-    The section name is one of: the named group 'name',
+    The section name is one of: the named group `name`,
     the first captured group, the entire match.
     """,
 )
@@ -325,8 +325,8 @@ def compile_pattern(pattern, fixed_strings, ignore_case, verbose):
 def show(obj, pattern, fixed_strings):
     """Output only sections matching PATTERN.
 
-    '^$' matches the lines before the first section.
-    '$none' matches no section.
+    `^$` matches the lines before the first section.
+    `$none` matches no section.
 
     """
     obj.setdefault('show', []).append(pattern)
@@ -342,8 +342,8 @@ def push(obj, pattern, fixed_strings):
     filters apply only to the sections that match
     any of the patterns in the stack.
 
-    'filter --section PATTERN' is equivalent to
-    'push PATTERN filter pop'.
+    `filter --section PATTERN` is equivalent to
+    `push PATTERN filter pop`.
 
     """
     stack = obj.setdefault('section_stack', [])
@@ -410,7 +410,7 @@ def section_option(fn):
     default=10,
     show_default=True,
     help="Print the first COUNT lines. "
-    "With a leading '-', print all but the last COUNT lines.",
+    "With a leading `-`, print all but the last COUNT lines.",
 )
 @section_option
 def head(count):
@@ -452,7 +452,7 @@ def tail_count_int(value):
     default=10,
     show_default=True,
     help="Print the last COUNT lines. "
-    "With a leading '+', print lines starting with line COUNT.",
+    "With a leading `+`, print lines starting with line COUNT.",
 )
 @section_option
 def tail(count):
@@ -485,20 +485,20 @@ def tail(count):
     '-v',
     '--invert-match',
     is_flag=True,
-    help="Output only lines *not* between those matching --start and --end.",
+    help="Output only lines *not* between those matching `--start` and `--end`.",
 )
 @click.option(
     '--repl',
     '--replacement',
     help="""
     Replace non-matching line spans with TEXT.
-    With --invert-match, backreferences to captures in --start are expanded;
-    without --invert-match, only escapes are expanded.
+    With `--invert-match`, backreferences to captures in `--start` are expanded;
+    without `--invert-match`, only escapes are expanded.
     """,
 )
 @section_option
 def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
-    """Output only lines between those matching --start and --end.
+    """Output only lines between those matching `--start` and `--end`.
 
     Roughly equivalent to: grep START -A9999 | grep END -B9999 | head -n-1
 
@@ -677,7 +677,7 @@ def split_field_slices(value):
     '--output-delimiter',
     show_default=True,
     help="Use as the output field delimiter. "
-    "If not given, and --delimiter and --fixed-strings are given, "
+    "If not given, and `--delimiter` and `--fixed-strings` are given, "
     "use the input delimiter. Otherwise, use one tab character.",
 )
 @section_option
@@ -699,7 +699,7 @@ def split(
         line.split(delim)       (--fixed-strings --delimiter delim)
         re.split(delim, line)   (--delimiter delim)
 
-    --fields takes a comma-separated list of ranges, each range one of:
+    `--fields` takes a comma-separated list of ranges, each range one of:
 
     \b
         N     Nth field, counted from 1
@@ -792,7 +792,7 @@ def sub(pattern, repl, fixed_strings, only_matching, color):
     help="""
     Replace the paths of existing files matching this pattern.
     Both recursive globs and brace expansion are supported, e.g.
-    {src,tests}/**/*.py.
+    `{src,tests}/**/*.py`.
     """,
 )
 @click.option('--modules', is_flag=True, help="Also replaced dotted module names.")
@@ -800,14 +800,14 @@ def sub(pattern, repl, fixed_strings, only_matching, color):
     '--modules-skip',
     type=click.IntRange(0),
     metavar='INTEGER',
-    help="Path levels to skip to obtain module names from paths. Implies --modules.",
+    help="Path levels to skip to obtain module names from paths. Implies `--modules`.",
 )
 @click.option(
     '--modules-recursive',
     is_flag=True,
     help="""
     Consider the parent directories of selected files to be modules too.
-    Implies --modules.
+    Implies `--modules`.
     """,
 )
 @section_option
@@ -831,7 +831,7 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
         .../test.py
 
     Dotted module names derived from the selected files can also be shortened.
-    For example, with --modules-skip 1 --modules-recursive, these modules:
+    For example, with `--modules-skip 1 --modules-recursive`, these modules:
 
     \b
         one.mod1

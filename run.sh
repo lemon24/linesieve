@@ -16,7 +16,7 @@ readonly PROJECT_ROOT=$( pwd )
 
 
 function install-dev {
-    pip install -e '.[tests,dev]'
+    pip install -e '.[tests,docs,dev]'
     pre-commit install
 }
 
@@ -29,5 +29,11 @@ function coverage-all {
     pytest --cov
     coverage html
 }
+
+
+function docs {
+    make -C docs html "$@"
+}
+
 
 "$@"

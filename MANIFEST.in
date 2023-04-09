@@ -1,3 +1,7 @@
-include LICENSE
+include LICENSE run.sh
 recursive-include tests *
+recursive-include tests *
+recursive-include examples *
+recursive-include docs *
 global-exclude *.py[cod]
+prune docs/_build
