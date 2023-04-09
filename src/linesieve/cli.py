@@ -129,7 +129,7 @@ def process_pipeline(ctx, processors, section, success, failure):
         label = label or '<no-section>'
         if success is not None and failure is not None:
             message = style(
-                f"unexpected end during {style(label, bold=True)}", fg='red'
+                f"linesieve: unexpected end during {style(label, bold=True)}", fg='red'
             )
             returncode = 1
 
@@ -141,7 +141,8 @@ def process_pipeline(ctx, processors, section, success, failure):
         returncode = process.returncode
         if not message:
             message = style(
-                f"exited with status code {style(str(returncode), bold=True)}",
+                f"linesieve: command exited with status code "
+                f"{style(str(returncode), bold=True)}",
                 fg=('green' if returncode == 0 else 'red'),
             )
         else:
@@ -151,10 +152,10 @@ def process_pipeline(ctx, processors, section, success, failure):
         if not message:
             assert success is None or failure is None, (success, failure)
             if success is not None:
-                message = style("success marker not found", fg='red')
+                message = style("linesieve: success marker not found", fg='red')
                 returncode = 1
             if failure is not None:
-                message = style("failure marker not found", fg='green')
+                message = style("linesieve: failure marker not found", fg='green')
                 returncode = 0
         else:
             message = None
