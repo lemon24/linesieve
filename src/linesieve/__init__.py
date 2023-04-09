@@ -12,27 +12,27 @@ All patterns use the Python regular expression syntax.
 Example:
 
 \b
-  $ cat file.txt
-  0
-  one:
-  1...
-  two:
-  2 (two)
-  three:
-  3, three
-  fail
+    $ cat file.txt
+    0
+    one:
+    1...
+    two:
+    2 (two)
+    three:
+    3, three
+    fail
 
 \b
-  $ cat file.txt | linesieve --section '(\\S+):$' --failure fail \\
-  > show --ignore-case ^O \\
-  > match --section one --only-matching '\\d+' \\
-  > sub '([a-z])' '\\1\\1\\1'
-  one  # dim
-  1
-  ..  # dim
-  three  # dim
-  3, ttthhhrrreeeeee
-  fail  # red
+    $ cat file.txt | linesieve --section '(\\S+):$' --failure fail \\
+    > show --ignore-case ^O \\
+    > match --section one --only-matching '\\d+' \\
+    > sub '([a-z])' '\\1\\1\\1'
+    one  # dim
+    1
+    ..  # dim
+    three  # dim
+    3, ttthhhrrreeeeee
+    fail  # red
 
 """
 

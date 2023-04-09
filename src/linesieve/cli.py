@@ -687,23 +687,23 @@ def split(
     Roughly equivalent to:
 
     \b
-      awk '{ print ... }'     (no --delimiter)
-      cut -d delim            (--fixed-strings --delimiter delim)
+        awk '{ print ... }'     (no --delimiter)
+        cut -d delim            (--fixed-strings --delimiter delim)
 
     Python equivalents:
 
     \b
-      line.split()            (no --delimiter)
-      line.split(delim)       (--fixed-strings --delimiter delim)
-      re.split(delim, line)   (--delimiter delim)
+        line.split()            (no --delimiter)
+        line.split(delim)       (--fixed-strings --delimiter delim)
+        re.split(delim, line)   (--delimiter delim)
 
     --fields takes a comma-separated list of ranges, each range one of:
 
     \b
-      N     Nth field, counted from 1
-      N-    from Nth field to end of line
-      N-M   from Nth to Mth (included) field
-       -M   from first to Mth (included) field
+        N     Nth field, counted from 1
+        N-    from Nth field to end of line
+        N-M   from Nth to Mth (included) field
+         -M   from first to Mth (included) field
 
     This is the same as the cut command. Unlike cut,
     selected fields are printed in the order from the list,
@@ -817,31 +817,31 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
     For example, given these files are selected:
 
     \b
-      src/one/mod1.py
-      src/one/two/mod2.py
-      tests/test.py
+        src/one/mod1.py
+        src/one/two/mod2.py
+        tests/test.py
 
     Their paths will be replaced with:
 
     \b
-      .../mod1.py
-      .../mod2.py
-      .../test.py
+        .../mod1.py
+        .../mod2.py
+        .../test.py
 
     Dotted module names derived from the selected files can also be shortened.
     For example, with --modules-skip 1 --modules-recursive, these modules:
 
     \b
-      one.mod1
-      one.two.mod2
-      one.two
+        one.mod1
+        one.two.mod2
+        one.two
 
     Will be replaced with:
 
     \b
-      ..mod1
-      ..mod2
-      ..two
+        ..mod1
+        ..mod2
+        ..two
 
     """
     from glob import glob

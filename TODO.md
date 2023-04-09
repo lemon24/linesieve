@@ -2,7 +2,6 @@
 Before 1.0:
 
 * [ ] help should mention "use subcommands to filter output"
-* [ ] examples should be indented by 4 spaces (wnat about split args?)
 * [ ] readme
   * [ ] no backticks for "grep, sed, awk"?
   * [ ] TODO: specific filters
