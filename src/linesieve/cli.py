@@ -141,7 +141,7 @@ def process_pipeline(ctx, processors, section, success, failure):
         returncode = process.returncode
         if not message:
             message = style(
-                f"linesieve: command exited with status code "
+                f"linesieve: {process.args[0]} exited with status code "
                 f"{style(str(returncode), bold=True)}",
                 fg=('green' if returncode == 0 else 'red'),
             )
