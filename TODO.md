@@ -1,9 +1,8 @@
 
 Before 1.0:
 
-* [ ] "linesieve --help" should not show examples
-* [ ] idem should mention "use subcommands to filter output"
-* [ ] "linesieve help" should have examples
+* [ ] help should mention "use subcommands to filter output"
+* [ ] examples should be indented by 4 spaces (wnat about split args?)
 * [ ] readme
   * [ ] no backticks for "grep, sed, awk"?
   * [ ] TODO: specific filters

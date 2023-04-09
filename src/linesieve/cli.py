@@ -20,99 +20,10 @@ from .parsing import make_pipeline
 # all the git options, generated with the script in the README
 
 
-def color_help(text):
-    KWARGS = {
-        'dim': dict(dim=True),
-        'red': dict(fg='red'),
-        'green': dict(fg='green'),
-        'yellow': dict(fg='yellow'),
-    }
-
-    def repl(match):
-        line, options = match.groups()
-        kwargs = {}
-        for option in options.split():
-            kwargs.update(KWARGS[option])
-        return style(line, **kwargs)
-
-    options_re = '|'.join(map(re.escape, KWARGS))
-    line_re = f"(.*)#((?: +(?:{options_re}))+ *)$"
-
-    return re.sub(line_re, repl, text, flags=re.M)
-
-
-def help_all_option():
-    return click.option(
-        "--help-all",
-        is_flag=True,
-        expose_value=False,
-        is_eager=True,
-        help="Show help for all commands and exit.",
-        callback=help_all_callback,
-    )
-
-
-def help_all_callback(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-
-    formatter = ctx.make_formatter()
-    formatter.indent_increment
-    commands = list_commands_recursive(ctx.command, ctx)
-
-    for path, command in commands:
-        title = style(path.upper(), bold=True)
-        if command.short_help:
-            short = command.short_help
-            first = short.partition(' ')[0]
-            if first.istitle():
-                short = first.lower() + short[len(first) :]
-            short = short.rstrip('.')
-            title += style(' - ' + short, dim=True)
-
-        formatter.write(title + '\n\n  ')
-
-        with formatter.indentation():
-            if command is ctx.command:
-                format_ctx = ctx
-            else:
-                format_ctx = type(ctx)(command, ctx, command.name)
-            command.format_help(format_ctx, formatter)
-
-        formatter.write('\n')
-
-    click.echo_via_pager(formatter.getvalue(), color=ctx.color)
-    ctx.exit()
-
-
-def list_commands_recursive(self, ctx, path=()):
-    path = path + (self.name,)
-    yield ' '.join(path), self
-    if not hasattr(self, 'list_commands'):
-        return
-    for subcommand in self.list_commands(ctx):
-        cmd = self.get_command(ctx, subcommand)
-        if cmd is None:
-            continue
-        if cmd.hidden:
-            continue
-        yield from list_commands_recursive(cmd, ctx, path)
-
-
-@contextmanager
-def handle_re_error(param_hint):
-    if isinstance(param_hint, str):
-        param_hint = [param_hint]
-    try:
-        yield
-    except re.error as e:
-        raise BadParameter(f"{e}: {e.pattern!r}", param_hint=param_hint)
-
-
 FURTHER_HELP = """\
 \b
+linesieve help --all
 linesieve COMMAND --help
-linesieve --help-all
 https://github.com/lemon24/linesieve
 """
 
@@ -130,10 +41,9 @@ class CLIGroup(click.Group):
 @click.group(
     name='linesieve',
     chain=True,
-    invoke_without_command=True,
     cls=CLIGroup,
-    help=color_help(linesieve.__doc__),
-    short_help="An unholy blend of grep, sed, awk, and Python.",
+    invoke_without_command=True,
+    no_args_is_help=True,
 )
 @click.option(
     '-s',
@@ -158,10 +68,10 @@ class CLIGroup(click.Group):
     Before exiting, output the last section if it wasn't already.
     """,
 )
-@help_all_option()
 @click.version_option(linesieve.__version__, message='%(prog)s %(version)s')
 @click.pass_context
 def cli(ctx, **kwargs):
+    """An unholy blend of grep, sed, awk, and Python."""
     # options reserved for future expansion:
     # -s --section --section-start
     # -e --section-end
@@ -299,6 +209,16 @@ def output_sections(groups, section_dot='.'):
             echo(line)
 
         prev_section = section
+
+
+@contextmanager
+def handle_re_error(param_hint):
+    if isinstance(param_hint, str):
+        param_hint = [param_hint]
+    try:
+        yield
+    except re.error as e:
+        raise BadParameter(f"{e}: {e.pattern!r}", param_hint=param_hint)
 
 
 # INPUT
@@ -1021,3 +941,134 @@ def sub_link(link):
         return pattern_re.sub(repl, line)
 
     return sub_link
+
+
+# HELP
+
+
+@cli.command()
+@click.option('--all', is_flag=True, help="Show help for all commands, man-style.")
+@click.pass_context
+def help(ctx, all):
+    """Show detailed help."""
+
+    ctx = ctx.find_root()
+    original_help = ctx.command.help
+    ctx.command.help = color_help(linesieve.__doc__)
+
+    try:
+        if not all:
+            click.echo(ctx.get_help(), color=ctx.color)
+        else:
+            click.echo_via_pager(format_help_all(ctx))
+    finally:
+        ctx.command.help = original_help
+
+    ctx.exit()
+
+
+def color_help(text):
+    KWARGS = {
+        'dim': dict(dim=True),
+        'red': dict(fg='red'),
+        'green': dict(fg='green'),
+        'yellow': dict(fg='yellow'),
+    }
+
+    def repl(match):
+        line, options = match.groups()
+        kwargs = {}
+        for option in options.split():
+            kwargs.update(KWARGS[option])
+        return style(line, **kwargs)
+
+    options_re = '|'.join(map(re.escape, KWARGS))
+    line_re = f"(.*)#((?: +(?:{options_re}))+ *)$"
+
+    return re.sub(line_re, repl, text, flags=re.M)
+
+
+class ManFormatter(click.HelpFormatter):
+    def __init__(self):
+        super().__init__(4, max_width=999999)
+        # print(self.width)
+
+    def write_dl(self, rows, col_max=30, col_spacing=2):
+        """Write the options definition after the term, indented.
+
+        col_max and col_spacing are ignored.
+
+        """
+        # for reasons (click bug?), the original write_dl() will spill over
+        # if indenting more than once (worsened by indent_increment > 2);
+        # this does not happen with our implementation
+
+        for i, (first, second) in enumerate(rows, 1):
+            self.write_text(first)
+            with self.indentation():
+                self.write_text(second)
+            if i != len(rows):
+                self.write_paragraph()
+
+    def write_usage(self, prog, args='', prefix='Usage: '):
+        if prefix is not None:
+            prefix = style(prefix, bold=True)
+
+        self.write(f"{'':>{self.current_indent}}")
+        super().write_usage(prog, args, prefix)
+
+    def write_heading(self, heading):
+        heading = style(heading, bold=True)
+        self.write(f"{'':>{self.current_indent}}{heading}\n")
+
+    @contextmanager
+    def supersection(self, name, short=None):
+        title = style(name.upper(), bold=True)
+        if short:
+            title += style(' - ' + short, dim=True)
+
+        self.write(title)
+        self.write_paragraph()
+        self.write_paragraph()
+
+        with self.indentation():
+            yield
+
+        self.write_paragraph()
+
+
+def format_help_all(ctx):
+    formatter = ManFormatter()
+    commands = list_commands_recursive(ctx.command, ctx)
+
+    for path, command in commands:
+        short = command.get_short_help_str(limit=55)
+        if short:
+            first = short.partition(' ')[0]
+            if first.istitle():
+                short = first.lower() + short[len(first) :]
+            short = short.rstrip('.')
+
+        if command is ctx.command:
+            format_ctx = ctx
+        else:
+            format_ctx = type(ctx)(command, ctx, command.name)
+
+        with formatter.supersection(' '.join(path), short):
+            command.format_help(format_ctx, formatter)
+
+    return formatter.getvalue()
+
+
+def list_commands_recursive(self, ctx, path=()):
+    path = path + (self.name,)
+    yield path, self
+    if not hasattr(self, 'list_commands'):
+        return
+    for subcommand in self.list_commands(ctx):
+        cmd = self.get_command(ctx, subcommand)
+        if cmd is None:
+            continue
+        if cmd.hidden:
+            continue
+        yield from list_commands_recursive(cmd, ctx, path)
