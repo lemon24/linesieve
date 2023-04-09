@@ -44,6 +44,7 @@ class CLIGroup(click.Group):
     cls=CLIGroup,
     invoke_without_command=True,
     no_args_is_help=True,
+    subcommand_metavar='[COMMAND [ARGS]...]... ',
 )
 @click.option(
     '-s',
