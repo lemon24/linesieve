@@ -18,9 +18,8 @@ User guide
 ----------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   self
    examples
    cli
 
