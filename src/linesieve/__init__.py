@@ -12,7 +12,7 @@ All patterns use the Python regular expression syntax.
 Example:
 
 \b
-    $ cat file.txt
+    $ cat simple.txt
     0
     one:
     1...
@@ -23,10 +23,11 @@ Example:
     fail
 
 \b
-    $ cat file.txt | linesieve --section '(\\S+):$' --failure fail \\
-    > show --ignore-case ^O \\
-    > match --section one --only-matching '\\d+' \\
-    > sub '([a-z])' '\\1\\1\\1'
+    $ cat simple.txt \\
+    | linesieve --section '(\\S+):$' --failure fail \\
+      show --ignore-case ^O \\
+      match --section one --only-matching '\\d+' \\
+      sub '([a-z])' '\\1\\1\\1'
     one  # dim
     1
     ..  # dim

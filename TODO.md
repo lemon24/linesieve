@@ -3,7 +3,7 @@ Before 1.0:
 
 * [ ] help should mention "use subcommands to filter output"
 * [ ] readme
-  * [ ] no backticks for "grep, sed, awk"?
+  * [x] no backticks for "grep, sed, awk"?
   * [ ] TODO: specific filters
   * [ ] basic example
   * [ ] git example – explain what's happening

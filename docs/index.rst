@@ -1,28 +1,32 @@
 
-
 linesieve
-=========
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
-
-Reference
 =========
 
 .. default-role:: literal
 
-.. click:: linesieve.cli:cli
-   :prog: linesieve
-   :nested: full
 
+.. include:: ../README.rst
+  :start-after: begin-intro
+  :end-before: end-intro
+
+.. include:: ../README.rst
+  :start-after: begin-main
+  :end-before: end-main
+
+
+User guide
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   self
+   examples
+   cli
 
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
