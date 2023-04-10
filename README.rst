@@ -1,3 +1,7 @@
+
+.. default-role:: literal
+
+
 .. begin-intro
 
 *This is my text munging tool. There are many like it, but this one is mine.*
