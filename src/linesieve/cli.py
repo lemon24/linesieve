@@ -229,13 +229,13 @@ def handle_re_error(param_hint):
 @cli.command(short_help="Read input from file.")
 @click.argument('file', type=click.File('r', lazy=True))
 @click.pass_obj
-def open(obj, file):
+def read(obj, file):
     """Read input from FILE instead of standard input.
 
-    Roughly equivalent to: cat FILE | linesieve
+    Roughly equivalent to: linesieve < FILE
 
     """
-    assert not obj.get('file'), "should not be possible for open to follow exec"
+    assert not obj.get('file'), "should not be possible for read to follow read-cmd"
     obj['file'] = file
 
 
@@ -243,7 +243,7 @@ def open(obj, file):
 @click.argument('command')
 @click.argument('argument', nargs=-1)
 @click.pass_obj
-def exec(obj, command, argument):
+def read_cmd(obj, command, argument):
     """Execute COMMAND and use its output as input.
 
     Roughly equivalent to: COMMAND | linesieve
@@ -252,7 +252,7 @@ def exec(obj, command, argument):
 
     """
     if obj.get('file'):
-        raise UsageError("exec and open are mutually exclusive")
+        raise UsageError("read-cmd and read are mutually exclusive")
     try:
         process = subprocess.Popen(
             (command,) + argument,

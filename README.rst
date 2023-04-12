@@ -350,7 +350,7 @@ This is where a script consisting of a single linesieve command comes in:
         '\g<pre>\g<cls>\g<mid>\g<suf>' \
     sub --color -X '^( \w+ (\.\w+)+ (?= :\s ))' '\1' \
     sub --color -X '(FAILED)' '\1' \
-    exec ant "$@"
+    read-cmd ant "$@"
 
 You can then call it instead of `ant`: `ant-wrapper.sh junit-single-test ...`.
 

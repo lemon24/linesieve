@@ -18,9 +18,9 @@ After 1.0:
 * match -e pattern -e pattern (hard to do with click while keeping arg)
 * match-span -s ... -s ..s
 * print last section without --failure if exec exits with non-zero (how?)
-* exec time
+* read-cmd time (and maybe for each section?)
 * collapse any repeated lines
-* runfilter "grep pattern"
+* runfilter "grep pattern" (exec sounds like a good name)
 * short command aliases (four-letter ones)
 * make dedupe_blank_lines optional
 * match replace spans of skipped lines with ... (match span already does this)

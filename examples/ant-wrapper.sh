@@ -38,4 +38,4 @@ sub -X '
     '\g<pre>\g<cls>\g<mid>\g<suf>' \
 sub --color -X '^( \w+ (\.\w+)+ (?= :\s ))' '\1' \
 sub --color -X '(FAILED)' '\1' \
-exec ant "$@"
+read-cmd ant "$@"
