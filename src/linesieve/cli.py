@@ -37,22 +37,34 @@ class InitialArgsMixin:
             yield ctx
 
 
-class CLIGroup(InitialArgsMixin, click.Group):
-    def format_options(self, ctx, formatter):
-        super().format_options(ctx, formatter)
-        with formatter.section('Further help'):
-            formatter.write_text(FURTHER_HELP)
+class EpilogSectionsMixin:
+    def __init__(self, *args, epilog_sections=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.epilog_sections = dict(epilog_sections or ())
 
+    def format_epilog(self, ctx, formatter):
+        for name, text in self.epilog_sections.items():
+            with formatter.section(name):
+                formatter.write_text(text)
+        super().format_epilog(ctx, formatter)
+
+
+class OrderedCommandsMixin:
     def list_commands(self, ctx):
         return self.commands
+
+
+class Group(InitialArgsMixin, EpilogSectionsMixin, OrderedCommandsMixin, click.Group):
+    pass
 
 
 @click.group(
     name='linesieve',
     chain=True,
-    cls=CLIGroup,
+    cls=Group,
     invoke_without_command=True,
     subcommand_metavar='[COMMAND [ARGS]...]... ',
+    epilog_sections={'Further help': FURTHER_HELP},
 )
 @click.option(
     '-s',
