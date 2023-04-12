@@ -28,7 +28,16 @@ https://github.com/lemon24/linesieve
 """
 
 
-class CLIGroup(click.Group):
+class InitialArgsMixin:
+    @contextmanager
+    def make_context(self, prog_name, args, **extra):
+        initial_args = tuple(args)
+        with super().make_context(prog_name, args, **extra) as ctx:
+            ctx.initial_args = initial_args
+            yield ctx
+
+
+class CLIGroup(InitialArgsMixin, click.Group):
     def format_options(self, ctx, formatter):
         super().format_options(ctx, formatter)
         with formatter.section('Further help'):
@@ -43,7 +52,6 @@ class CLIGroup(click.Group):
     chain=True,
     cls=CLIGroup,
     invoke_without_command=True,
-    no_args_is_help=True,
     subcommand_metavar='[COMMAND [ARGS]...]... ',
 )
 @click.option(
@@ -98,6 +106,14 @@ def process_pipeline(ctx, processors, section, success, failure):
         file = click.get_text_stream('stdin')
 
     if file.isatty():
+        # we are not using no_args_is_help=True, because as of click 8.1.3,
+        # "linesieve show p --not-an-option" shows help instead of
+        # "Error: No such command '--not-an-option'." (click bug?)
+        if not ctx.initial_args:
+            # TODO: show short help here instead
+            echo(ctx.get_help(), color=ctx.color)
+            ctx.exit()
+
         echo(style("linesieve: reading from terminal", dim=True), err=True)
 
     process = ctx.obj.get('process')
