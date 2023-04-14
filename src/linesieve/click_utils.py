@@ -38,6 +38,7 @@ class Group(InitialArgsMixin, EpilogSectionsMixin, OrderedCommandsMixin, click.G
 def color_help(text):
     KWARGS = {
         'dim': dict(dim=True),
+        'bold': dict(bold=True),
         'red': dict(fg='red'),
         'green': dict(fg='green'),
         'yellow': dict(fg='yellow'),

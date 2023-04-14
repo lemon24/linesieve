@@ -1,11 +1,9 @@
 
 Before 1.0:
 
-* [ ] help should mention "use subcommands to filter output"
-* [ ] use `ls -1 /* | linesieve -s '(.*:)' show -i 'app*|bin' head -n2` as example
 * [ ] short help should not show options or commands
 * [ ] readme
-  * [x] no backticks for "grep, sed, awk"?
+  * [ ] use the `ls` example
   * [ ] TODO: specific filters
   * [ ] basic example
   * [ ] git example – explain what's happening
