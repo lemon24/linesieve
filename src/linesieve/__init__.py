@@ -1,6 +1,4 @@
 """
-An unholy blend of grep, sed, awk, and Python.
-
 Read standard input, process it, and write to standard output.
 
 Split input into sections, and output selected sections.
