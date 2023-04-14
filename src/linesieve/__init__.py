@@ -1,7 +1,6 @@
 """
-linesieve is a tool for splitting text input into sections,
-applying filters to the lines in each section,
-and writing results to standard output.
+linesieve is a tool for splitting text input into sections and
+applying filters to the lines in each section.
 
 Example:
 
