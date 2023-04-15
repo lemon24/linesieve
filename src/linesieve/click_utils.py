@@ -1,3 +1,4 @@
+import inspect
 import re
 from contextlib import contextmanager
 
@@ -31,11 +32,36 @@ class OrderedCommandsMixin:
         return self.commands
 
 
-class Group(InitialArgsMixin, EpilogSectionsMixin, OrderedCommandsMixin, click.Group):
-    pass
+class ColorHelpMixin:
+    def __init__(self, *args, **kwargs):
+        self.__help = None
+        super().__init__(*args, **kwargs)
+
+    @property
+    def help(self):
+        return self.__help
+
+    @help.setter
+    def help(self, value):
+        if value:
+            value = color_help(value)
+        self.__help = value
+
+
+class Group(
+    InitialArgsMixin,
+    EpilogSectionsMixin,
+    OrderedCommandsMixin,
+    ColorHelpMixin,
+    click.Group,
+):
+    class command_class(ColorHelpMixin, click.Command):
+        pass
 
 
 def color_help(text):
+    text = inspect.cleandoc(text)
+
     KWARGS = {
         'dim': dict(dim=True),
         'bold': dict(bold=True),

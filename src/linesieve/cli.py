@@ -11,7 +11,6 @@ from click import style
 from click import UsageError
 
 import linesieve
-from .click_utils import color_help
 from .click_utils import Group
 from .parsing import make_pipeline
 
@@ -37,7 +36,7 @@ https://github.com/lemon24/linesieve
     invoke_without_command=True,
     subcommand_metavar='[COMMAND [ARGS]...]... ',
     epilog_sections={'Further help': FURTHER_HELP},
-    help=color_help(linesieve.__doc__),
+    help=linesieve.__doc__,
     short_help="An unholy blend of grep, sed, awk, and Python.",
 )
 @click.option(
