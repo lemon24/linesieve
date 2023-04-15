@@ -33,19 +33,13 @@ class OrderedCommandsMixin:
 
 
 class ColorHelpMixin:
-    def __init__(self, *args, **kwargs):
-        self.__help = None
-        super().__init__(*args, **kwargs)
-
     @property
     def help(self):
-        return self.__help
+        return vars(self)['help']
 
     @help.setter
     def help(self, value):
-        if value:
-            value = color_help(value)
-        self.__help = value
+        vars(self)['help'] = color_help(value)
 
 
 class Group(
