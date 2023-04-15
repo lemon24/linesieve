@@ -233,7 +233,11 @@ def handle_re_error(param_hint):
 def read(obj, file):
     """Read input from FILE instead of standard input.
 
-    Roughly equivalent to: linesieve < FILE
+    Roughly equivalent to: `linesieve < FILE`
+
+    \b
+        $ linesieve read file.txt
+        hello
 
     """
     assert not obj.get('file'), "should not be possible for read to follow read-cmd"
@@ -247,9 +251,14 @@ def read(obj, file):
 def read_cmd(obj, command, argument):
     """Execute COMMAND and use its output as input.
 
-    Roughly equivalent to: COMMAND | linesieve
+    Roughly equivalent to: `COMMAND | linesieve`
 
     If the command finishes, exit with its status code.
+
+    \b
+        $ linesieve read-cmd echo bonjour
+        bonjour
+        linesieve: echo exited with status code 0  # green
 
     """
     if obj.get('file'):
@@ -329,6 +338,14 @@ def show(obj, pattern, fixed_strings):
     `^$` matches the lines before the first section.
     `$none` matches no section.
 
+    \b
+        $ ls -1 /* | linesieve -s '.*:' show /bin match ash
+        .....  # dim
+        /bin:  # dim bold
+        bash
+        dash
+        ..........  # dim
+
     """
     obj.setdefault('show', []).append(pattern)
 
@@ -345,6 +362,22 @@ def push(obj, pattern, fixed_strings):
 
     `filter --section PATTERN` is equivalent to
     `push PATTERN filter pop`.
+
+    \b
+        $ ls -1 /* | linesieve -s '.*:' \\
+        > show bin \\
+        > push /bin \\
+        >   head -n1 \\
+        > pop \\
+        > head -n2
+        .....  # dim
+        /bin:  # dim bold
+        [
+        ......  # dim
+        /sbin:  # dim bold
+        apfs_hfs_convert
+        disklabel
+        ...  # dim
 
     """
     stack = obj.setdefault('section_stack', [])
@@ -417,7 +450,12 @@ def section_option(fn):
 def head(count):
     """Print the first COUNT lines.
 
-    Roughly equivalent to: head -n COUNT
+    Roughly equivalent to: `head -n COUNT`
+
+    \b
+        $ echo -e 'a\\nb\\nc' | linesieve head -n2
+        a
+        b
 
     """
     from itertools import islice
@@ -459,7 +497,12 @@ def tail_count_int(value):
 def tail(count):
     """Print the last COUNT lines.
 
-    Roughly equivalent to: tail -n COUNT
+    Roughly equivalent to: `tail -n COUNT`
+
+    \b
+        $ echo -e 'a\\nb\\nc' | linesieve tail -n2
+        b
+        c
 
     """
     from itertools import islice
@@ -501,7 +544,15 @@ def tail(count):
 def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
     """Output only lines between those matching `--start` and `--end`.
 
-    Roughly equivalent to: grep START -A9999 | grep END -B9999 | head -n-1
+    Roughly equivalent to: `grep START -A9999 | grep END -B9999 | head -n-1`
+
+    \b
+        $ seq 20 | linesieve span --start ^2$ --end ^5$ --repl ...
+        ...
+        2
+        3
+        4
+        ...
 
     """
 
@@ -581,9 +632,19 @@ def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
 def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
     """Output only lines matching PATTERN.
 
-    Roughly equivalent to: grep PATTERN
+    Roughly equivalent to: `grep PATTERN`
 
     Works like re.search() in Python.
+
+    \b
+        $ seq 10 | linesieve match 1
+        1
+        10
+    \b
+        $ echo a1b2c3 | linesieve match -o '\\d+'
+        1
+        2
+        3
 
     """
 
@@ -712,6 +773,11 @@ def split(
     selected fields are printed in the order from the list,
     and more than once, if repeated.
 
+    \b
+        $ echo -e 'a-b\\nc-d' | linesieve split -d- -f2
+        b
+        d
+
     """
     if delimiter is None or (fixed_strings and not ignore_case):
         max_split = max_split or -1
@@ -763,9 +829,13 @@ def split(
 def sub(pattern, repl, fixed_strings, only_matching, color):
     """Replace PATTERN matches with REPL.
 
-    Roughly equivalent to: sed 's/PATTERN/REPL/g'
+    Roughly equivalent to: `sed 's/PATTERN/REPL/g'`
 
     Works like re.sub() in Python.
+
+    \b
+        $ echo a1b2c3 | linesieve sub '\\d+' x
+        axbxcx
 
     """
     if fixed_strings:
@@ -796,7 +866,7 @@ def sub(pattern, repl, fixed_strings, only_matching, color):
     `{src,tests}/**/*.py`.
     """,
 )
-@click.option('--modules', is_flag=True, help="Also replaced dotted module names.")
+@click.option('--modules', is_flag=True, help="Also replace dotted module names.")
 @click.option(
     '--modules-skip',
     type=click.IntRange(0),
@@ -848,7 +918,7 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
 
     """
     from glob import glob
-    from braceexpand import braceexpand, UnbalancedBracesError
+    from braceexpand import braceexpand
     from .paths import shorten_paths, paths_to_modules, make_file_paths_re
 
     paths = []
@@ -856,7 +926,7 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
         for unexpanded_pattern in include:
             for pattern in braceexpand(unexpanded_pattern):
                 paths.extend(glob(pattern, recursive=True))
-    except UnbalancedBracesError as e:
+    except ValueError as e:
         raise BadParameter(e, param_hint=['--include'])
 
     replacements = shorten_paths(paths, os.sep, '...')
@@ -889,7 +959,11 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
 def sub_cwd():
     """Make paths in the working directory relative.
 
-    Roughly equivalent to: sub $( pwd ) ''
+    Roughly equivalent to: `sub $( pwd ) ''`
+
+    \b
+        $ echo "hello from $( pwd )/src" | linesieve sub-cwd
+        hello from src
 
     """
     min_length = 2
@@ -917,7 +991,7 @@ def sub_cwd():
 def sub_link(link):
     """Replace the target of symlink LINK with LINK.
 
-    Roughly equivalent to: sub $( realpath LINK ) LINK
+    Roughly equivalent to: `sub $( realpath LINK ) LINK`
 
     """
     min_length = 2
