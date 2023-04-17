@@ -18,10 +18,10 @@ User guide
 ----------
 
 .. toctree::
-   :maxdepth: 3
+  :maxdepth: 3
 
-   examples
-   cli
+  cli
+  examples
 
 
 Indices and tables

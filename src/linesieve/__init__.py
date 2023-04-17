@@ -2,8 +2,6 @@
 linesieve is a tool for splitting text input into sections and
 applying filters to the lines in each section.
 
-Example:
-
 \b
     $ ls -1 /* | linesieve -s '.*:' show bin match ^d head -n2
     .....  # dim
@@ -16,18 +14,16 @@ Example:
     dmesg
     ...  # dim
 
-Here, we
-split a file listing for multiple directories,
-show only sections whose names contain `bin`,
-and for each section only show lines starting with `d`,
-but at most the first 2 lines.
+This example uses `linesieve`
+to print the first two files starting with `d`
+from each directory whose name contains `bin`.
 
 
 You can specify a section marker regex with `--section`,
 as well as `--success` and `--failure` markers
 which cause linesieve to exit early.
 To show only specific sections, use the `show` subcommand;
-skipped sections will be marked with a dot on stderr.
+skipped sections are marked with a dot on stderr.
 
 \b
     $ ls -1 /* | linesieve -s '.*:' --failure ^cat show bin
@@ -38,6 +34,7 @@ skipped sections will be marked with a dot on stderr.
     cat  # red
 
 All patterns use the Python regular expression syntax.
+
 
 You can use subcommands to filter the lines in each section.
 To restrict a filter to specific sections,
@@ -56,6 +53,7 @@ using the `push` and `pop` subcommands.
     disklabel
     ...  # dim
 
+
 By default, linesieve reads from the standard input,
 but it can also read from a file or a command
 with the `read` and `read-cmd` subcommands.
@@ -64,6 +62,7 @@ with the `read` and `read-cmd` subcommands.
     $ linesieve read-cmd echo bonjour
     bonjour
     linesieve: echo exited with status code 0  # green
+
 
 On output, runs of blank lines are collapsed into a single line.
 

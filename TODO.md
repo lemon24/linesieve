@@ -3,10 +3,6 @@ Before 1.0:
 
 * [ ] short help should not show options or commands
 * [ ] readme
-  * [ ] use the `ls` example
-  * [ ] TODO: specific filters
-  * [ ] basic example
-  * [ ] git example – explain what's happening
   * [ ] traceback example – reread/edit
   * [ ] ant example – finish
 

@@ -43,60 +43,54 @@ born out of spite.
 .. begin-main
 
 
-
 Features
 --------
 
-* line-oriented
-* section-oriented
+`linesieve` allows you to:
 
-  * show only matching sections
-  * show the failing section
-  * apply filters only to specific sections
-
-* match/sub with the full power of `re`_
+* split text input into sections
+* apply filters to specific sections
+* search and highlight success/failure markers
+* match/sub/split with the full power of Python's `re`_
+* shorten paths, links and module names
 * chain filters into pipelines
-* colors!
-* TODO: specific filters
+* color output!
 
 .. _re: https://docs.python.org/3/library/re.html
 
 
-
-Quickstart
+Installing
 ----------
 
-.. code-block:: console
-
-    $ pip install linesieve
-
+Install and update using `pip`_:
 
 .. code-block:: console
 
-    $ cat simple.txt
-    0
-    one:
-    1...
-    two:
-    2 (two)
-    three:
-    3, three
-    fail
+    $ pip install --upgrade linesieve
+
+.. _pip: https://pip.pypa.io/en/stable/getting-started/
+
+
+A simple example
+----------------
 
 .. code-block:: console
 
-    $ cat simple.txt \
-    | linesieve --section '(\S+):$' --failure fail \
-      show --ignore-case ^O \
-      match --section one --only-matching '\d+' \
-      sub '([a-z])' '\1\1\1'
-    one
-    1
-    ..
-    three
-    3, ttthhhrrreeeeee
-    fail
+    $ ls -1 /* | linesieve -s '.*:' show bin match ^d head -n2
+    .....
+    /bin:
+    dash
+    date
+    ......
+    /sbin:
+    disklabel
+    dmesg
+    ...
 
+This example uses `linesieve`
+to print the first two files starting with `d`
+from each directory whose name contains `bin`
+(skipped sections are marked with a dot on stderr).
 
 
 Links
@@ -106,7 +100,6 @@ Links
 * Documentation: https://linesieve.readthedocs.io/
 * Issue Tracker: https://github.com/lemon24/linesieve/issues
 * Source Code: https://github.com/lemon24/linesieve
-
 
 
 .. end-main
