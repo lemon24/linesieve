@@ -68,4 +68,4 @@ On output, runs of blank lines are collapsed into a single line.
 
 """
 
-__version__ = '1.0b2'
+__version__ = '1.0b3'
