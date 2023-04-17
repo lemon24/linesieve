@@ -2,9 +2,6 @@
 Before 1.0:
 
 * [ ] short help should not show options or commands
-* [ ] readme
-  * [ ] traceback example – reread/edit
-  * [ ] ant example – finish
 
 
 After 1.0:

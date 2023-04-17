@@ -956,7 +956,7 @@ def sub_paths(include, modules, modules_skip, modules_recursive):
 @cli.command(short_help="Make working directory paths relative.")
 @section_option
 def sub_cwd():
-    """Make paths in the working directory relative.
+    """Make absolute paths in the working directory relative.
 
     Roughly equivalent to: `sub $( pwd ) ''`
 

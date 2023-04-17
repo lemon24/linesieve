@@ -111,51 +111,12 @@ Examples
 
 .. begin-examples
 
-Get all options used by any git command
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Note that some of the man pages contain multiple OPTIONS sections (e.g. ADVANCED OPTIONS).
-
-.. code-block:: bash
-
-    export MANWIDTH=9999
-
-    function man-section {
-        col -b | linesieve -s '^[A-Z ()-]+$' show "$@"
-    }
-
-    man git \
-    | man-section COMMANDS match -o '^ +(git-\w+)' \
-    | cat - <( echo git ) \
-    | sort | uniq \
-    | xargs -n1 man \
-    | man-section OPTIONS match -o '^ +(-.*)' \
-        sub -F -- '--[no-]' '--' \
-        sub -F -- '--no-' '--' \
-    | sort -dfu
-
-
-.. code-block:: text
-
-    -/ <path>
-    -, --stdin
-    -0
-    ...
-    -a, --all
-    -A, --all, --ignore-removal
-    -a, --annotate
-    ...
-    --autosquash, --autosquash
-    --autostash, --autostash
-    -b
-    -b, --branch
-    ...
-
 
 Make Java tracebacks more readable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Assume you're writing some Java tests with JUnit, on a project that looks like this:
+Assume you're writing some Java tests with JUnit,
+on a project that looks like this:
 
 .. code-block:: text
 
@@ -195,7 +156,7 @@ This command:
         ' \
         '\g<pre>\g<cls>\g<mid>\g<suf>'
 
-... shortens this traceback:
+... shortens this 76 line traceback:
 
 .. code-block:: text
 
@@ -225,9 +186,10 @@ This command:
     	...
     12:34:56.999 [main] INFO done
 
-Let's break that linesieve command down a bit:
+Let's break that `linesieve` command down a bit:
 
 * The `span` gets rid of all the traceback lines coming from JUnit.
+* The `match -v` skips some usually useless lines from stack traces.
 * The `sub-paths` shortens and highlights the names of classes in the current project;
   `com.example.someproject.somepackage.ThingDoer` becomes `..ThingDoer`
   (presumably that's enough info to open the file).
@@ -242,7 +204,7 @@ Let's break that linesieve command down a bit:
 Apache Ant output
 ~~~~~~~~~~~~~~~~~
 
-Finally, let's look at why linesieve was born in the first place
+Let's look at why `linesieve` was born in the first place
 – cleaning up Apache Ant output.
 
 We'll use Ant's own test output as an example,
@@ -257,7 +219,7 @@ Running a single test with:
 
     ant junit-single-test -Djunit.testcase=org.apache.tools.ant.ProjectTest
 
-... produces 77 lines of output, which looks like this:
+... produces 77 lines of output:
 
 .. code-block:: text
 
@@ -290,23 +252,30 @@ Running a single test with:
     BUILD SUCCESSFUL
     Total time: 12 seconds
 
-(If you don't think it's all that bad,
-try to imagine how it would look for a serious Enterprise Project™.)
+If this doesn't look all that bad,
+try imagining what it looks like
+for a Serious Enterprise Project™.
 
-This is indeed very helpful
+
+Lots of output is indeed very helpful
 – if you're waiting tens of minutes for the entire test suite to run,
-you want all the details in the output,
+and/or it runs on some remote server,
+you want all the details in there,
 so you can debug failures without having to run it another time.
 
-However, it's not very helpful when you're developing,
-and only care about the thing you're working on right now.
+However, it's not very helpful during development,
+whey you only care about the thing you're working on *right now*.
+And it's doubly not helpful if you want to re-run the test suite
+on each file update with something like `entr`_.
 
-This is where a script consisting of a single linesieve command comes in:
+.. _entr: http://eradman.com/entrproject/
+
+
+This is where a `linesieve` wrapper script can help:
 
 .. code-block:: bash
 
     #!/bin/sh
-
     linesieve \
         --section '^(\S+):$' \
         --success 'BUILD SUCCESSFUL' \
@@ -345,10 +314,10 @@ This is where a script consisting of a single linesieve command comes in:
     sub --color -X '(FAILED)' '\1' \
     read-cmd ant "$@"
 
-You can then call it instead of `ant`: `ant-wrapper.sh junit-single-test ...`.
+You can then call this instead of `ant`: `ant-wrapper.sh junit-single-test ...`.
 
 
-TODO: describe this output
+Successful output looks like this (28 lines):
 
 .. code-block:: text
 
@@ -381,6 +350,7 @@ TODO: describe this output
     .
     BUILD SUCCESSFUL
 
+... "failure" output looks like this (34 lines):
 
 .. code-block:: text
 
@@ -419,6 +389,7 @@ TODO: describe this output
     .
     BUILD SUCCESSFUL
 
+... and true failure due to a compile error looks like this (12 lines):
 
 .. code-block:: text
 
@@ -436,6 +407,25 @@ TODO: describe this output
     BUILD FAILED
 
 
-TODO: linesieve command breakdown
+Breaking down the `linesieve` command
+(skipping the parts discussed in the previous example):
+
+* `--section '^(\S+):$'` tells `linesieve`
+  sections start with a word followed by a colon.
+* The `show`\s hide all sections except specific ones.
+* `--success` and `--failure` tell `linesieve`
+  to exit when encountering one of these patterns.
+  Note that the failing section above is shown
+  despite not being selected with `show`.
+* `sub-cwd` makes absolute paths in the working directory relative.
+* The `-s compile` option passed to `sub` applies that filter
+  only to sections matching `compile`.
+* `push compile` applies all the following filters, until `pop`,
+  only to sections matching `compile`.
+* The last two `sub --color ... '\1'` color
+  dotted words followed by a colon at the beginning of the line
+  (e.g. `junit.framework.AssertionFailedError:`),
+  and `FAILED` anywhere in the input.
+* Finally, `read-cmd` executes a command and uses its output as input.
 
 .. end-examples
