@@ -18,7 +18,7 @@ Example:
 
 \v
 
-You can specify a section marker regex with `--section`,
+You can specify a section marker regex with `-s/--section`,
 as well as `--success` and `--failure` markers
 which cause linesieve to exit early.
 To show only specific sections, use the `show` subcommand;
@@ -68,4 +68,4 @@ On output, runs of blank lines are collapsed into a single line.
 
 """
 
-__version__ = '1.0b3'
+__version__ = '1.0'

@@ -87,10 +87,9 @@ A simple example
     dmesg
     ...
 
-This example uses `linesieve`
-to print the first two files starting with `d`
+This prints the first two files starting with `d`
 from each directory whose name contains `bin`
-(skipped sections are marked with a dot on stderr).
+(skipped directories are marked with a dot on stderr).
 
 
 Links
@@ -112,8 +111,8 @@ Examples
 .. begin-examples
 
 
-Make Java tracebacks more readable
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Java tracebacks
+~~~~~~~~~~~~~~~
 
 Assume you're writing some Java tests with JUnit,
 on a project that looks like this:
@@ -258,14 +257,13 @@ for a Serious Enterprise Project™.
 
 
 Lots of output is indeed very helpful
-– if you're waiting tens of minutes for the entire test suite to run,
-and/or it runs on some remote server,
+– if you're waiting minutes for the entire test suite to run,
 you want all the details in there,
-so you can debug failures without having to run it another time.
+so you can debug failures without having to run it again.
 
 However, it's not very helpful during development,
-whey you only care about the thing you're working on *right now*.
-And it's doubly not helpful if you want to re-run the test suite
+when you only care about the thing you're working on *right now*.
+And it's doubly not helpful if you want to re-run the tests
 on each file update with something like `entr`_.
 
 .. _entr: http://eradman.com/entrproject/
@@ -408,17 +406,17 @@ Successful output looks like this (28 lines):
 
 
 Breaking down the `linesieve` command
-(skipping the parts discussed in the previous example):
+(skipping the parts from the traceback example):
 
 * `--section '^(\S+):$'` tells `linesieve`
   sections start with a word followed by a colon.
 * The `show`\s hide all sections except specific ones.
 * `--success` and `--failure` tell `linesieve`
   to exit when encountering one of these patterns.
-  Note that the failing section above is shown
-  despite not being selected with `show`.
+  Note that the failing section is shown
+  regardless of `show`.
 * `sub-cwd` makes absolute paths in the working directory relative.
-* The `-s compile` option passed to `sub` applies that filter
+* The `-s compile` option passed to `sub` applies it
   only to sections matching `compile`.
 * `push compile` applies all the following filters, until `pop`,
   only to sections matching `compile`.

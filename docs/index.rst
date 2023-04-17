@@ -22,6 +22,7 @@ User guide
 
   cli
   examples
+  changelog
 
 
 Indices and tables
