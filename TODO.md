@@ -1,9 +1,4 @@
 
-Before 1.0:
-
-* [ ] short help should not show options or commands
-
-
 After 1.0:
 
 * bugbear?

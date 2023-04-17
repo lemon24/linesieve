@@ -2,6 +2,8 @@
 linesieve is a tool for splitting text input into sections and
 applying filters to the lines in each section.
 
+Example:
+
 \b
     $ ls -1 /* | linesieve -s '.*:' show bin match ^d head -n2
     .....  # dim
@@ -14,10 +16,7 @@ applying filters to the lines in each section.
     dmesg
     ...  # dim
 
-This example uses `linesieve`
-to print the first two files starting with `d`
-from each directory whose name contains `bin`.
-
+\v
 
 You can specify a section marker regex with `--section`,
 as well as `--success` and `--failure` markers

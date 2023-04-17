@@ -42,11 +42,31 @@ class ColorHelpMixin:
         vars(self)['help'] = color_help(value)
 
 
+class AbridgedHelpMixin:
+    def format_abridged_help(self, ctx, formatter):
+        self.format_usage(ctx, formatter)
+
+        if self.help:
+            text = inspect.cleandoc(self.help).partition('\v')[0]
+            formatter.write_paragraph()
+
+            with formatter.indentation():
+                formatter.write_text(text)
+
+        self.format_epilog(ctx, formatter)
+
+    def get_abridged_help(self, ctx):
+        formatter = ctx.make_formatter()
+        self.format_abridged_help(ctx, formatter)
+        return formatter.getvalue().rstrip("\n")
+
+
 class Group(
     InitialArgsMixin,
     EpilogSectionsMixin,
     OrderedCommandsMixin,
     ColorHelpMixin,
+    AbridgedHelpMixin,
     click.Group,
 ):
     class command_class(ColorHelpMixin, click.Command):

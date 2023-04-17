@@ -24,8 +24,8 @@ from .parsing import make_pipeline
 FURTHER_HELP = """\
 \b
 linesieve help --all
-linesieve COMMAND --help
-https://github.com/lemon24/linesieve
+linesieve [COMMAND] --help
+https://linesieve.readthedocs.io/
 """
 
 
@@ -94,8 +94,7 @@ def process_pipeline(ctx, processors, section, success, failure):
         # "linesieve show p --not-an-option" shows help instead of
         # "Error: No such command '--not-an-option'." (click bug?)
         if not ctx.initial_args:
-            # TODO: show short help here instead
-            echo(ctx.get_help(), color=ctx.color)
+            echo(ctx.command.get_abridged_help(ctx), color=ctx.color)
             ctx.exit()
 
         echo(style("linesieve: reading from terminal", dim=True), err=True)
