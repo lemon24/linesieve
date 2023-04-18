@@ -34,6 +34,7 @@ https://linesieve.readthedocs.io/
     chain=True,
     cls=Group,
     invoke_without_command=True,
+    context_settings=dict(auto_envvar_prefix='LINESIEVE'),
     subcommand_metavar='[COMMAND [ARGS]...]... ',
     epilog_sections={'Further help': FURTHER_HELP},
     help=linesieve.__doc__,
@@ -62,6 +63,8 @@ https://linesieve.readthedocs.io/
     Before exiting, output the last section if it wasn't already.
     """,
 )
+@click.option('--line-delay', type=click.FloatRange(0), hidden=True)
+@click.option('--section-delay', type=click.FloatRange(0), hidden=True)
 @click.version_option(linesieve.__version__, message='%(prog)s %(version)s')
 @click.pass_context
 def cli(ctx, **kwargs):
@@ -74,7 +77,9 @@ def cli(ctx, **kwargs):
 
 @cli.result_callback()
 @click.pass_context
-def process_pipeline(ctx, processors, section, success, failure):
+def process_pipeline(
+    ctx, processors, section, success, failure, line_delay, section_delay
+):
     if section is not None:
         with handle_re_error('--section'):
             section = re.compile(section)
@@ -103,6 +108,28 @@ def process_pipeline(ctx, processors, section, success, failure):
     show = ctx.obj.get('show')
 
     processors = [p for p in processors if p]
+
+    if line_delay:
+
+        def _line_delay(file):
+            from time import sleep
+
+            for line in file:
+                sleep(line_delay)
+                yield line
+
+        file = _line_delay(file)
+
+    if section_delay:
+
+        def _section_delay(lines):
+            from time import sleep
+
+            sleep(section_delay)
+            return lines
+
+        _section_delay.is_iter = True
+        processors.insert(0, ([], _section_delay))
 
     status, label = output_sections(
         make_pipeline(file, section, success, failure, show, processors)
