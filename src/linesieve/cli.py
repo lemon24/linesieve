@@ -1,3 +1,4 @@
+import errno
 import os.path
 import re
 from contextlib import contextmanager
@@ -457,6 +458,78 @@ def section_option(fn):
         return section_res, rv
 
     return wrapper
+
+
+@cli.command(short_help="FIXME")
+@click.argument('command')
+@section_option
+def exec(command):
+    """FIXME"""
+
+    # FIXME: tests
+
+    def exec(lines):
+        import subprocess
+        import threading
+
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            text=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+
+        threading.Thread(
+            target=stdin_write,
+            args=(lines, process.stdin),
+            daemon=True,
+        ).start()
+
+        keyboard_interrupt = False
+        try:
+            with process.stdout:
+                for line in process.stdout:
+                    yield line.rstrip('\n')
+        except KeyboardInterrupt:
+            keyboard_interrupt = True
+            raise
+        finally:
+            returncode = process.wait()
+            if keyboard_interrupt:
+                pass
+            elif returncode != 0:
+                import shlex
+
+                message = (
+                    f"linesieve exec: {shlex.split(command)[0]} "
+                    f"exited with status code {returncode}"
+                )
+                echo(style(message, fg='red'), err=True)
+
+    exec.is_iter = True
+    return exec
+
+
+def stdin_write(lines, file):
+    with handle_broken_pipe(), file, handle_broken_pipe():
+        for line in lines:
+            file.write(line)
+            file.write('\n')
+
+
+@contextmanager
+def handle_broken_pipe():
+    # https://github.com/python/cpython/blob/3.11/Lib/subprocess.py#L1138
+    try:
+        yield
+    except BrokenPipeError:
+        pass
+    except OSError as exc:
+        if exc.errno == errno.EINVAL:
+            pass
+        else:
+            raise
 
 
 # LINE RANGES
