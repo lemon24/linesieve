@@ -1,6 +1,5 @@
 import os.path
 import re
-import subprocess
 from contextlib import contextmanager
 from functools import wraps
 
@@ -288,6 +287,9 @@ def read_cmd(obj, command, argument):
     """
     if obj.get('file'):
         raise UsageError("read-cmd and read are mutually exclusive")
+
+    import subprocess
+
     try:
         process = subprocess.Popen(
             (command,) + argument,
@@ -297,6 +299,7 @@ def read_cmd(obj, command, argument):
         )
     except OSError as e:
         raise BadParameter(e, param_hint='COMMAND')
+
     obj['process'] = process
     obj['file'] = process.stdout
 
