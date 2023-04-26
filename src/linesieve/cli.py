@@ -7,6 +7,7 @@ from functools import wraps
 import click
 from click import BadParameter
 from click import echo
+from click import secho
 from click import style
 from click import UsageError
 
@@ -102,7 +103,7 @@ def process_pipeline(
             echo(ctx.command.get_abridged_help(ctx), color=ctx.color)
             ctx.exit()
 
-        echo(style("linesieve: reading from terminal", dim=True), err=True)
+        secho("linesieve: reading from terminal", dim=True, err=True)
 
     process = ctx.obj.get('process')
     show = ctx.obj.get('show')
@@ -210,7 +211,7 @@ def output_sections(groups, section_dot='.'):
 
     for section, lines in groups:
         if section == '' and prev_section is not None:
-            echo(style(section_dot, dim=True), err=True, nl=False)
+            secho(section_dot, dim=True, err=True, nl=False)
             last_was_dot = True
         elif last_was_dot:
             echo(err=True)
@@ -223,7 +224,7 @@ def output_sections(groups, section_dot='.'):
             return section, prev_section
 
         if section:
-            echo(style(section, dim=True, bold=True))
+            secho(section, dim=True, bold=True)
 
         line = next(lines, None)
         if line:
@@ -505,7 +506,7 @@ def exec(command):
                     f"linesieve exec: {shlex.split(command)[0]} "
                     f"exited with status code {returncode}"
                 )
-                echo(style(message, fg='red'), err=True)
+                secho(message, fg='red', err=True)
 
     exec.is_iter = True
     return exec
