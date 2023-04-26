@@ -162,8 +162,7 @@ def process_pipeline(
         echo(message, err=status not in {True, False})
 
     if process:
-        process.wait()
-        returncode = process.returncode
+        returncode = process.wait()
         if not message:
             message = style(
                 f"linesieve: {process.args[0]} exited with status code "
