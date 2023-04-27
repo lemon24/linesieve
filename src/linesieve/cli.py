@@ -464,12 +464,21 @@ def section_option(fn):
 # GENERIC FILTERS
 
 
-@cli.command(short_help="FIXME")
+@cli.command(short_help="Pipe sections to command.")
 @click.argument('command')
 @section_option
 def pipe(command):
-    """FIXME"""
+    """Pipe lines to COMMAND and replace them with the output.
 
+    COMMAND is executed once per section.
+
+    \b
+        $ echo a-b | linesieve pipe 'tr -d -'
+        ab
+
+    """
+
+    # alternate name: exec
     # FIXME: tests
 
     def pipe(lines):
