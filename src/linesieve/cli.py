@@ -477,9 +477,7 @@ def pipe(command):
         ab
 
     """
-
     # alternate name: exec
-    # FIXME: tests
 
     def pipe(lines):
         import subprocess

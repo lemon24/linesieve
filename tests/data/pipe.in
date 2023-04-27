@@ -1,0 +1,16 @@
+-s '(\S+):$'
+pipe -s one 'cut -d- -f1'
+pipe -s two 'echo yyy'
+pipe -s true true
+pipe -s false false
+---
+one:
+a-b
+c-d
+true:
+t
+false:
+f
+two:
+xxx
+xxx
