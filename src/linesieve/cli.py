@@ -461,15 +461,18 @@ def section_option(fn):
     return wrapper
 
 
+# GENERIC FILTERS
+
+
 @cli.command(short_help="FIXME")
 @click.argument('command')
 @section_option
-def exec(command):
+def pipe(command):
     """FIXME"""
 
     # FIXME: tests
 
-    def exec(lines):
+    def pipe(lines):
         import subprocess
         import threading
 
@@ -503,13 +506,13 @@ def exec(command):
                 import shlex
 
                 message = (
-                    f"linesieve exec: {shlex.split(command)[0]} "
+                    f"linesieve pipe: {shlex.split(command)[0]} "
                     f"exited with status code {returncode}"
                 )
                 secho(message, fg='red', err=True)
 
-    exec.is_iter = True
-    return exec
+    pipe.is_iter = True
+    return pipe
 
 
 def stdin_write(lines, file):
