@@ -10,22 +10,21 @@ def make_pipeline(
     section_pattern,
     success_pattern,
     failure_pattern,
-    section_filters,
+    include_patterns,
+    exclude_patterns,
     line_filters,
 ):
     groups = group_by_section(
         annotate_lines(file, section_pattern, success_pattern, failure_pattern)
     )
 
-    if not section_filters:
-
-        def show_section(section):
-            return True
-
-    else:
-
-        def show_section(section):
-            return any(p.search(section) for p in section_filters)
+    def show_section(section):
+        if exclude_patterns:
+            if any(p.search(section) for p in exclude_patterns):
+                return False
+        if include_patterns:
+            return any(p.search(section) for p in include_patterns)
+        return True
 
     end_is_failure = None not in {success_pattern, failure_pattern}
     groups = filter_sections(groups, show_section, end_is_failure)

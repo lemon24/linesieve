@@ -107,6 +107,7 @@ def process_pipeline(
 
     process = ctx.obj.get('process')
     show = ctx.obj.get('show')
+    hide = ctx.obj.get('hide')
 
     processors = [p for p in processors if p]
 
@@ -133,7 +134,7 @@ def process_pipeline(
         processors.insert(0, ([], _section_delay))
 
     status, label = output_sections(
-        make_pipeline(file, section, success, failure, show, processors)
+        make_pipeline(file, section, success, failure, show, hide, processors)
     )
 
     message = None
@@ -364,6 +365,8 @@ def compile_pattern(pattern, fixed_strings, ignore_case, verbose):
 def show(obj, pattern, fixed_strings):
     """Output only sections matching PATTERN.
 
+    `hide` patterns take priority over `show` patterns.
+
     `^$` matches the lines before the first section.
     `$none` matches no section.
 
@@ -377,6 +380,30 @@ def show(obj, pattern, fixed_strings):
 
     """
     obj.setdefault('show', []).append(pattern)
+
+
+@cli.command(short_help="Hide selected sections.")
+@pattern_argument
+@click.pass_obj
+def hide(obj, pattern, fixed_strings):
+    """Do not output sections matching PATTERN.
+
+    `hide` patterns take priority over `show` patterns.
+
+    `^$` matches the lines before the first section.
+    `$none` matches no section.
+
+    \b
+        $ ls -1 /* | linesieve -s '.*:' show bin hide /bin head -n2
+        ............  # dim
+        /sbin:  # dim bold
+        apfs_hfs_convert
+        disklabel
+        ...  # dim
+
+
+    """
+    obj.setdefault('hide', []).append(pattern)
 
 
 @cli.command(short_help="Push patterns onto the section stack.")

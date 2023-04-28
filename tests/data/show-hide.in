@@ -1,0 +1,9 @@
+--section '(\S+):$' show t hide r
+---
+0
+one:
+1
+two:
+2
+three:
+3

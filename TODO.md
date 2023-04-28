@@ -2,7 +2,6 @@
 After 1.0:
 
 * bugbear?
-* hide section command
 * match -e pattern -e pattern (hard to do with click while keeping arg)
 * match-span -s ... -s ..s
 * print last section without --failure if read-cmd exits with non-zero (how?)
