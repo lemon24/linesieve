@@ -18,6 +18,7 @@ release = linesieve.__version__
 
 extensions = [
     'sphinx_rtd_theme',
+    'sphinx_issues',
 ]
 
 
@@ -25,6 +26,9 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
     'collapse_navigation': False,
 }
+
+
+issues_github_path = 'lemon24/linesieve'
 
 
 import docutils.nodes  # noqa: E402

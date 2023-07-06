@@ -1,0 +1,4 @@
+match --color -iX '   a + '
+---
+A
+B

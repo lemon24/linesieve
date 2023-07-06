@@ -2,6 +2,7 @@ import errno
 import os.path
 import re
 from contextlib import contextmanager
+from functools import partial
 from functools import wraps
 
 import click
@@ -13,6 +14,7 @@ from click import UsageError
 
 import linesieve
 from .click_utils import Group
+from .parsing import group_records
 from .parsing import make_pipeline
 
 
@@ -64,6 +66,31 @@ https://linesieve.readthedocs.io/
     Before exiting, output the last section if it wasn't already.
     """,
 )
+@click.option(
+    '--record-start',
+    '--rs',
+    metavar='PATTERN',
+    help="""
+    Operate on multi-line records instead of individual lines.
+    Records begin with lines matching `--record-start`,
+    and end with the line before the next record start,
+    or with the line matching `--record-end`, if provided.
+    Lines outside record markers are also grouped into records.
+    `--section` always applies to individual lines,
+    regardless of `--record-start`
+    (input is first split into sections, then into records).
+    In patterns that apply to records,
+    `.` matches any character, including newlines.
+    """,
+)
+@click.option(
+    '--record-end',
+    metavar='PATTERN',
+    help="""
+    Consider matching lines the end of the current record.
+    Requires `--record-start`.
+    """,
+)
 @click.option('--line-delay', type=click.FloatRange(0), hidden=True)
 @click.option('--section-delay', type=click.FloatRange(0), hidden=True)
 @click.version_option(linesieve.__version__, message='%(prog)s %(version)s')
@@ -79,7 +106,15 @@ def cli(ctx, **kwargs):
 @cli.result_callback()
 @click.pass_context
 def process_pipeline(
-    ctx, processors, section, success, failure, line_delay, section_delay
+    ctx,
+    processors,
+    section,
+    success,
+    failure,
+    record_start,
+    record_end,
+    line_delay,
+    section_delay,
 ):
     if section is not None:
         with handle_re_error('--section'):
@@ -90,6 +125,13 @@ def process_pipeline(
     if failure is not None:
         with handle_re_error('--failure'):
             failure = re.compile(failure)
+
+    if record_start is not None:
+        with handle_re_error('--record-start'):
+            record_start = re.compile(record_start)
+    if record_end is not None:
+        with handle_re_error('--record-end'):
+            record_end = re.compile(record_end)
 
     file = ctx.obj.get('file')
     if not file:
@@ -110,6 +152,15 @@ def process_pipeline(
     hide = ctx.obj.get('hide')
 
     processors = [p for p in processors if p]
+
+    if record_start:
+        group_records_processor = partial(
+            group_records, record_start=record_start, record_end=record_end
+        )
+        group_records_processor.is_iter = True
+        processors.insert(0, ([], group_records_processor))
+    elif record_end:
+        raise UsageError("Option --record-end requires --record-start.")
 
     if line_delay:
 
@@ -344,10 +395,14 @@ def pattern_argument(fn):
 
 
 def compile_pattern(pattern, fixed_strings, ignore_case, verbose):
+    # pass-through, this comes from a higher-up compile_pattern()
+    if isinstance(pattern, re.Pattern):
+        return pattern
+
     if fixed_strings:
         pattern = re.escape(pattern)
 
-    flags = 0
+    flags = re.DOTALL
     if ignore_case:
         flags |= re.IGNORECASE
     if verbose:
@@ -498,6 +553,9 @@ def pipe(command):
     """Pipe lines to COMMAND and replace them with the output.
 
     COMMAND is executed once per section.
+
+    Command output is not parsed back into multi-line records,
+    even if `linesieve --record-start` was used.
 
     \b
         $ echo a-b | linesieve pipe 'tr -d -'

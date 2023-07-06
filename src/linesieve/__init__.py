@@ -53,6 +53,19 @@ using the `push` and `pop` subcommands.
     ...  # dim
 
 
+You can also operate on multi-line records instead of individual lines:
+
+\b
+    $ linesieve --record-start '^\\d+:\\d+' match two << EOF
+    00:01 one
+    00:02 ...
+    two
+    00:03 three
+    EOF
+    00:02 ...
+    two
+
+
 By default, linesieve reads from the standard input,
 but it can also read from a file or a command
 with the `read` and `read-cmd` subcommands.

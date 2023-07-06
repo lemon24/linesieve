@@ -1,0 +1,13 @@
+--record-start { --record-end }
+sub '^(.*)' '[\1]'
+---
+zero
+{ one
+two
+} three
+four
+five
+{
+six
+}
+seven

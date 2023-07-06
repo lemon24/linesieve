@@ -249,3 +249,19 @@ def dedupe_blank_lines(groups):
         if section not in {True, False, None}:
             lines = dedupe(lines)
         yield section, lines
+
+
+def group_records(lines, record_start, record_end):
+    group = []
+    for line in lines:
+        if record_start.search(line):
+            if group:
+                yield '\n'.join(group)
+                group.clear()
+        group.append(line)
+        if record_end and record_end.search(line):
+            if group:
+                yield '\n'.join(group)
+                group.clear()
+    if group:
+        yield '\n'.join(group)

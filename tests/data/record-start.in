@@ -1,0 +1,20 @@
+--section '\S+:$' --record-start '^\d+:\d+ '
+match -s before-and-one-line one
+match -s multi-line three
+---
+before-and-one-line:
+zero
+one
+00:01 one
+00:02 two
+three
+00:03 three
+3
+multi-line:
+zero
+one
+00:01 one
+00:02 two
+three
+00:03 three
+3
