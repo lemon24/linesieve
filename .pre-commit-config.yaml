@@ -23,4 +23,5 @@ repos:
     hooks:
       - id: check-byte-order-marker
       - id: trailing-whitespace
+        exclude: "\\.out$"
       - id: end-of-file-fixer

@@ -73,7 +73,7 @@ https://linesieve.readthedocs.io/
     help="""
     Operate on multi-line records instead of individual lines.
     Records begin with lines matching `--record-start`,
-    and end with the line before the next record start,
+    and end with the line *before* the next record start,
     or with the line matching `--record-end`, if provided.
     Lines outside record markers are also grouped into records.
     `--section` always applies to individual lines,
@@ -1014,6 +1014,80 @@ def split(
     # -s, --only-delimited
     # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
     #   ...this requires a custom string.Formatter that coerces string arguments
+
+
+@cli.command(short_help="Parse structured data.")
+@pattern_argument
+@click.option(
+    '--json',
+    is_flag=True,
+    help="""
+    Output groups as JSON instead of tab-separated values.
+    Output one JSON value per line,
+    either a JSON object (if named groups are used)
+    or a JSON array (otherwise).
+    """,
+)
+@section_option
+def parse(pattern, json, fixed_strings):
+    """Parse lines into structured data.
+
+    If PATTERN uses named groups,
+    output the groups as name-value pairs
+    (unnamed groups are ignored):
+
+    \b
+        $ echo +1a+ | linesieve parse '(?P<one>\\d)(?P<two>\\w)'
+        one	1	two	a
+
+    If there are only groups without names, output all the groups:
+
+    \b
+        $ echo +1a+ | linesieve parse '(\\d)(\\w)'
+        1	a
+
+    If there are no groups, output the entire match.
+
+    By default, both names and values are tab-separated.
+
+    You can output JSON using the `--json` option:
+
+    \b
+        $ echo +1a+ | linesieve parse --json '(?P<one>\\d)(?P<two>\\w)'
+        {"one": "1", "two": "a"}
+        $ echo +1a+ | linesieve parse --json '(\\d)(\\w)'
+        ["1", "a"]
+
+    """
+    # TODO: --output-delimiter (account for both : and ,)
+    # TODO: -o to hide non-matching lines? (like sub)
+    # TODO: -m/--all/--findall to match multiple times? (like match -o)
+    # "Works like re.findall() in Python"
+    # TODO: match -o dict, match --json
+
+    if not json:
+        from itertools import chain
+
+        def render_dict(data):
+            return '\t'.join(v or '' for v in chain.from_iterable(data.items()))
+
+        def render_list(data):
+            return '\t'.join(v or '' for v in data)
+
+    else:
+        from json import dumps as json_dumps
+
+        render_dict = render_list = json_dumps
+
+    def processor(line):
+        match = pattern.search(line)
+        if not match:
+            return line
+        if groupdict := match.groupdict():
+            return render_dict(groupdict)
+        return render_list(match.groups() or [match.group()])
+
+    return processor
 
 
 @cli.command(short_help="Replace pattern.")

@@ -1,0 +1,27 @@
+dict:
+one	1	two	a
+one	1	two	
+no match
+list:
+1	a
+1	
+no match
+dict-and-list:
+one	1
+no match
+no-groups:
+1a
+1
+no match
+json-dict:
+{"one": "1", "two": "a"}
+{"one": "1", "two": null}
+no match
+json-list:
+["1", "a"]
+["1", null]
+no match
+json-no-groups:
+["1a"]
+["1"]
+no match
