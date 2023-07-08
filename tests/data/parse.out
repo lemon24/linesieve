@@ -25,3 +25,7 @@ json-no-groups:
 ["1a"]
 ["1"]
 no match
+patterns:
+digit	1
+letter	a
+...

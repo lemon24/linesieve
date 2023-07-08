@@ -1,11 +1,12 @@
 --section '\S+:$'
-parse -s ^dict:$ '(?P<one>\d)(?P<two>\w)?'
-parse -s ^list:$ '(\d)(\w)?'
-parse -s ^dict-and-list:$ '(?P<one>\d)(\w)'
-parse -s ^no-groups:$ '\d\w?'
-parse -s ^json-dict:$ --json '(?P<one>\d)(?P<two>\w)?'
-parse -s ^json-list:$ --json '(\d)(\w)?'
-parse -s ^json-no-groups:$ --json '\d\w?'
+parse -s ^dict:$ -e '(?P<one>\d)(?P<two>\w)?'
+parse -s ^list:$ -e '(\d)(\w)?'
+parse -s ^dict-and-list:$ -e '(?P<one>\d)(\w)'
+parse -s ^no-groups:$ -e '\d\w?'
+parse -s ^json-dict:$ --json -e '(?P<one>\d)(?P<two>\w)?'
+parse -s ^json-list:$ --json -e '(\d)(\w)?'
+parse -s ^json-no-groups:$ --json -e '\d\w?'
+parse -s ^patterns:$ -e '(?P<digit>\d)' -e '(?P<letter>[a-z])'
 ---
 dict:
 .1a.
@@ -34,3 +35,7 @@ json-no-groups:
 .1a.
 .1.
 no match
+patterns:
+.1.
+.a.
+...

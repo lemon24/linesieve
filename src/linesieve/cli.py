@@ -1017,7 +1017,15 @@ def split(
 
 
 @cli.command(short_help="Parse structured data.")
-@pattern_argument
+@click.option(
+    '-e',
+    '--regexp',
+    metavar="PATTERN",
+    required=True,
+    multiple=True,
+    help="Use PATTERN as the pattern (can be used multiple times).",
+)
+@pattern_options
 @click.option(
     '--json',
     is_flag=True,
@@ -1029,33 +1037,36 @@ def split(
     """,
 )
 @section_option
-def parse(pattern, json, fixed_strings):
+def parse(regexp, fixed_strings, ignore_case, verbose, json):
     """Parse lines into structured data.
 
-    If PATTERN uses named groups,
+    If the -e PATTERN uses named groups,
     output the groups as name-value pairs
     (unnamed groups are ignored):
 
     \b
-        $ echo +1a+ | linesieve parse '(?P<one>\\d)(?P<two>\\w)'
+        $ echo +1a+ | linesieve parse -e '(?P<one>\\d)(?P<two>\\w)'
         one	1	two	a
 
     If there are only groups without names, output all the groups:
 
     \b
-        $ echo +1a+ | linesieve parse '(\\d)(\\w)'
+        $ echo +1a+ | linesieve parse -e '(\\d)(\\w)'
         1	a
 
     If there are no groups, output the entire match.
 
-    By default, both names and values are tab-separated.
+    If mutiple patterns are specified, they are tried in order,
+    and the first matching one is used.
+    If no pattern matched, the line is output as-is.
 
+    By default, both names and values are tab-separated.
     You can output JSON using the `--json` option:
 
     \b
-        $ echo +1a+ | linesieve parse --json '(?P<one>\\d)(?P<two>\\w)'
+        $ echo +1a+ | linesieve parse --json -e '(?P<one>\\d)(?P<two>\\w)'
         {"one": "1", "two": "a"}
-        $ echo +1a+ | linesieve parse --json '(\\d)(\\w)'
+        $ echo +1a+ | linesieve parse --json -e '(\\d)(\\w)'
         ["1", "a"]
 
     """
@@ -1064,6 +1075,8 @@ def parse(pattern, json, fixed_strings):
     # TODO: -m/--all/--findall to match multiple times? (like match -o)
     # "Works like re.findall() in Python"
     # TODO: match -o dict, match --json
+
+    patterns = [compile_pattern(p, fixed_strings, ignore_case, verbose) for p in regexp]
 
     if not json:
         from itertools import chain
@@ -1080,12 +1093,15 @@ def parse(pattern, json, fixed_strings):
         render_dict = render_list = json_dumps
 
     def processor(line):
-        match = pattern.search(line)
-        if not match:
+        for pattern in patterns:
+            match = pattern.search(line)
+            if not match:
+                continue
+            if groupdict := match.groupdict():
+                return render_dict(groupdict)
+            return render_list(match.groups() or [match.group()])
+        else:
             return line
-        if groupdict := match.groupdict():
-            return render_dict(groupdict)
-        return render_list(match.groups() or [match.group()])
 
     return processor
 
