@@ -181,3 +181,67 @@ def list_commands_recursive(self, ctx, path=()):
         if cmd.hidden:
             continue
         yield from list_commands_recursive(cmd, ctx, path)
+
+
+class RegexType(click.ParamType):
+    name = 'regular expression'
+
+    def get_metavar(self, param):
+        return 'PATTERN'
+
+    def __init__(self, flags=0, with_options=False):
+        super().__init__()
+        self.flags = flags
+        self.with_options = with_options
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, re.Pattern):
+            return value
+
+        flags = self.flags
+
+        if self.with_options:
+            if ctx.params['fixed_strings']:
+                value = re.escape(value)
+            if ctx.params['ignore_case']:
+                flags |= re.IGNORECASE
+            if ctx.params['verbose']:
+                flags |= re.VERBOSE
+
+        try:
+            return re.compile(value, flags)
+        except re.error as e:
+            self.fail(f"{e}: {e.pattern!r}", param, ctx)
+
+    OPTIONS = [
+        click.option(
+            '-F',
+            '--fixed-strings',
+            is_flag=True,
+            is_eager=True,
+            help="Interpret the pattern as a fixed string.",
+        ),
+        click.option(
+            '-i',
+            '--ignore-case',
+            is_flag=True,
+            is_eager=True,
+            help="Perform case-insensitive matching.",
+        ),
+        click.option(
+            '-X',
+            '--verbose',
+            is_flag=True,
+            is_eager=True,
+            help="Ignore whitespace and comments in the pattern.",
+        ),
+    ]
+
+    @classmethod
+    def add_options(cls, fn):
+        for decorator in reversed(cls.OPTIONS):
+            fn = decorator(fn)
+        return fn
+
+
+REGEX = RegexType()

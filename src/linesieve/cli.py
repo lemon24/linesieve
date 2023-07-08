@@ -14,9 +14,10 @@ from click import UsageError
 
 import linesieve
 from .click_utils import Group
+from .click_utils import REGEX
+from .click_utils import RegexType
 from .parsing import group_records
 from .parsing import make_pipeline
-
 
 # references for common command-line option names:
 # https://www.gnu.org/prep/standards/html_node/Option-Table.html
@@ -46,7 +47,7 @@ https://linesieve.readthedocs.io/
 @click.option(
     '-s',
     '--section',
-    metavar='PATTERN',
+    type=REGEX,
     help="""
     Consider matching lines the start of a new section.
     The section name is one of: the named group `name`,
@@ -55,12 +56,12 @@ https://linesieve.readthedocs.io/
 )
 @click.option(
     '--success',
-    metavar='PATTERN',
+    type=REGEX,
     help="If matched, exit with a status code indicating success.",
 )
 @click.option(
     '--failure',
-    metavar='PATTERN',
+    type=REGEX,
     help="""
     If matched, exit with a status code indicating failure.
     Before exiting, output the last section if it wasn't already.
@@ -69,7 +70,7 @@ https://linesieve.readthedocs.io/
 @click.option(
     '--record-start',
     '--rs',
-    metavar='PATTERN',
+    type=REGEX,
     help="""
     Operate on multi-line records instead of individual lines.
     Records begin with lines matching `--record-start`,
@@ -85,7 +86,7 @@ https://linesieve.readthedocs.io/
 )
 @click.option(
     '--record-end',
-    metavar='PATTERN',
+    type=REGEX,
     help="""
     Consider matching lines the end of the current record.
     Requires `--record-start`.
@@ -116,23 +117,6 @@ def process_pipeline(
     line_delay,
     section_delay,
 ):
-    if section is not None:
-        with handle_re_error('--section'):
-            section = re.compile(section)
-    if success is not None:
-        with handle_re_error('--success'):
-            success = re.compile(success)
-    if failure is not None:
-        with handle_re_error('--failure'):
-            failure = re.compile(failure)
-
-    if record_start is not None:
-        with handle_re_error('--record-start'):
-            record_start = re.compile(record_start)
-    if record_end is not None:
-        with handle_re_error('--record-end'):
-            record_end = re.compile(record_end)
-
     file = ctx.obj.get('file')
     if not file:
         file = click.get_text_stream('stdin')
@@ -291,14 +275,45 @@ def output_sections(groups, section_dot='.'):
         prev_section = section
 
 
-@contextmanager
-def handle_re_error(param_hint):
-    if isinstance(param_hint, str):
-        param_hint = [param_hint]
-    try:
-        yield
-    except re.error as e:
-        raise BadParameter(f"{e}: {e.pattern!r}", param_hint=param_hint)
+OPTIONS_REGEX = RegexType(re.DOTALL, with_options=True)
+
+
+def pattern_argument(fn):
+    @click.argument('pattern', type=OPTIONS_REGEX)
+    @OPTIONS_REGEX.add_options
+    @wraps(fn)
+    def wrapper(*args, pattern, fixed_strings, ignore_case, verbose, **kwargs):
+        return fn(*args, pattern=pattern, fixed_strings=fixed_strings, **kwargs)
+
+    return wrapper
+
+
+def section_option(fn):
+    @click.option(
+        '-s',
+        '--section',
+        type=REGEX,
+        metavar='SECTION',
+        help="""
+        Apply only to matching sections.
+        If there are patterns on the section stack,
+        push the pattern (that is, apply *also* to matching sections).
+        """,
+    )
+    @wraps(fn)
+    def wrapper(*args, section, **kwargs):
+        rv = fn(*args, **kwargs)
+        if rv is None:
+            return None
+
+        ctx = click.get_current_context()
+        section_res = list(ctx.obj.setdefault('section_stack', []))
+        if section:
+            section_res.append(section)
+
+        return section_res, rv
+
+    return wrapper
 
 
 # INPUT
@@ -355,60 +370,6 @@ def read_cmd(obj, command, argument):
 
     obj['process'] = process
     obj['file'] = process.stdout
-
-
-PATTERN_OPTIONS = [
-    click.option(
-        '-F',
-        '--fixed-strings',
-        is_flag=True,
-        help="Interpret the pattern as a fixed string.",
-    ),
-    click.option(
-        '-i', '--ignore-case', is_flag=True, help="Perform case-insensitive matching."
-    ),
-    click.option(
-        '-X',
-        '--verbose',
-        is_flag=True,
-        help="Ignore whitespace and comments in the pattern.",
-    ),
-]
-
-
-def pattern_options(fn):
-    for decorator in PATTERN_OPTIONS:
-        fn = decorator(fn)
-    return fn
-
-
-def pattern_argument(fn):
-    @click.argument('pattern')
-    @pattern_options
-    @wraps(fn)
-    def wrapper(*args, pattern, fixed_strings, ignore_case, verbose, **kwargs):
-        with handle_re_error('PATTERN'):
-            pattern_re = compile_pattern(pattern, fixed_strings, ignore_case, verbose)
-        return fn(*args, pattern=pattern_re, fixed_strings=fixed_strings, **kwargs)
-
-    return wrapper
-
-
-def compile_pattern(pattern, fixed_strings, ignore_case, verbose):
-    # pass-through, this comes from a higher-up compile_pattern()
-    if isinstance(pattern, re.Pattern):
-        return pattern
-
-    if fixed_strings:
-        pattern = re.escape(pattern)
-
-    flags = re.DOTALL
-    if ignore_case:
-        flags |= re.IGNORECASE
-    if verbose:
-        flags |= re.VERBOSE
-
-    return re.compile(pattern, flags)
 
 
 # SECTION CONTROL
@@ -513,34 +474,6 @@ def pop(obj, all):
         stack.pop()
     else:
         stack.clear()
-
-
-def section_option(fn):
-    @click.option(
-        '-s',
-        '--section',
-        metavar='PATTERN',
-        help="""
-        Apply only to matching sections.
-        If there are patterns on the section stack,
-        push the pattern (that is, apply *also* to matching sections).
-        """,
-    )
-    @wraps(fn)
-    def wrapper(*args, section, **kwargs):
-        rv = fn(*args, **kwargs)
-        if rv is None:
-            return None
-
-        ctx = click.get_current_context()
-        section_res = list(ctx.obj.setdefault('section_stack', []))
-        if section is not None:
-            with handle_re_error('--section'):
-                section_res.append(re.compile(section))
-
-        return section_res, rv
-
-    return wrapper
 
 
 # GENERIC FILTERS
@@ -717,10 +650,10 @@ def tail(count):
 
 @cli.command(short_help="Output matching line spans.")
 @click.option(
-    '--start', '--start-with', metavar='PATTERN', help="Span start (inclusive)."
+    '--start', '--start-with', type=OPTIONS_REGEX, help="Span start (inclusive)."
 )
-@click.option('--end', '--end-before', metavar='PATTERN', help="Span end (exclusive).")
-@pattern_options
+@click.option('--end', '--end-before', type=OPTIONS_REGEX, help="Span end (exclusive).")
+@OPTIONS_REGEX.add_options
 @click.option(
     '-v',
     '--invert-match',
@@ -755,15 +688,6 @@ def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
     # options reserved for future expansion:
     # --start-after (mutually exclusive with --start-with)
     # --end-with (mutually exclusive with --end-before)
-
-    start_re = end_re = None
-    if start:
-        with handle_re_error('--start'):
-            start_re = compile_pattern(start, fixed_strings, ignore_case, verbose)
-    if end:
-        with handle_re_error('--end'):
-            end_re = compile_pattern(end, fixed_strings, ignore_case, verbose)
-
     empty_match = re.search('.*', '')
 
     def match_span(lines):
@@ -771,13 +695,13 @@ def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
         in_span_changed = True
 
         for line in lines:
-            start_match = start_re.search(line) if start_re else None
+            start_match = start.search(line) if start else None
 
-            if start_re and start_match:
+            if start and start_match:
                 if not in_span:
                     in_span = True
                     in_span_changed = True
-            elif end_re and end_re.search(line):
+            elif end and end.search(line):
                 if in_span:
                     in_span = False
                     in_span_changed = True
@@ -918,7 +842,7 @@ def split_field_slices(value):
     "If not given, use runs of whitespace as a delimiter "
     "(with leading/trailing whitespace stripped first).",
 )
-@pattern_options
+@OPTIONS_REGEX.add_options
 @click.option(
     '-n',
     '--max-split',
@@ -942,8 +866,16 @@ def split_field_slices(value):
     "use the input delimiter. Otherwise, use one tab character.",
 )
 @section_option
+@click.pass_context
 def split(
-    delimiter, fixed_strings, ignore_case, verbose, max_split, fields, output_delimiter
+    ctx,
+    delimiter,
+    fixed_strings,
+    ignore_case,
+    verbose,
+    max_split,
+    fields,
+    output_delimiter,
 ):
     """Print selected parts of lines.
 
@@ -986,8 +918,8 @@ def split(
 
     else:
         # TODO: optimization: if the pattern is a simple string ("aa"), use str.split()
-        with handle_re_error('--delimiter'):
-            pattern = compile_pattern(delimiter, fixed_strings, ignore_case, verbose)
+        param = next(p for p in ctx.command.params if p.name == 'delimiter')
+        pattern = OPTIONS_REGEX.convert(delimiter, param, ctx)
         max_split = max_split or 0
 
         def split(line):
@@ -1018,12 +950,13 @@ def split(
 @click.option(
     '-e',
     '--regexp',
-    metavar="PATTERN",
+    'patterns',
+    type=OPTIONS_REGEX,
     required=True,
     multiple=True,
     help="Use PATTERN as the pattern; multiple patterns are tried in order.",
 )
-@pattern_options
+@OPTIONS_REGEX.add_options
 @click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
 @click.option(
     '--json',
@@ -1036,7 +969,7 @@ def split(
     """,
 )
 @section_option
-def parse(regexp, fixed_strings, ignore_case, verbose, only_matching, json):
+def parse(patterns, fixed_strings, ignore_case, verbose, only_matching, json):
     """Parse lines into structured data.
 
     If the -e PATTERN uses named groups,
@@ -1073,8 +1006,6 @@ def parse(regexp, fixed_strings, ignore_case, verbose, only_matching, json):
     # because of click limitations on chained commands;
     # we chose `-e` because we want to be able to try multiple patterns in a
     # single invocation (repeating the command doesn't make sense with -o)
-
-    patterns = [compile_pattern(p, fixed_strings, ignore_case, verbose) for p in regexp]
 
     if not json:
         from itertools import chain
