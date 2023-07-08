@@ -756,8 +756,6 @@ def span(start, end, fixed_strings, ignore_case, verbose, invert_match, repl):
     # --start-after (mutually exclusive with --start-with)
     # --end-with (mutually exclusive with --end-before)
 
-    # TODO: should start/end be arguments? hard to do if we want them to be optional
-
     start_re = end_re = None
     if start:
         with handle_re_error('--start'):
@@ -842,7 +840,12 @@ def match(ctx, pattern, fixed_strings, only_matching, invert_match, color):
         2
         3
 
+    For parsing structured data, see `linesieve parse`.
+
     """
+    # we cannot have both `match PATTERN` and  `match -e PATTERN -e PATTERN`
+    # because of click limitations on chained commands;
+    # acceptable, `parse -e PATTERN ...` can offer similar functionality
 
     if color and not invert_match and not only_matching:
         return ctx.invoke(
@@ -1010,11 +1013,6 @@ def split(
 
     return processor
 
-    # TODO:
-    # -s, --only-delimited
-    # --output-format '{1}{2!r}'? zero-indexed? 1-indexed?
-    #   ...this requires a custom string.Formatter that coerces string arguments
-
 
 @cli.command(short_help="Parse structured data.")
 @click.option(
@@ -1023,7 +1021,7 @@ def split(
     metavar="PATTERN",
     required=True,
     multiple=True,
-    help="Use PATTERN as the pattern (can be used multiple times).",
+    help="Use PATTERN as the pattern; multiple patterns are tried in order.",
 )
 @pattern_options
 @click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
@@ -1071,10 +1069,10 @@ def parse(regexp, fixed_strings, ignore_case, verbose, only_matching, json):
         ["1", "a"]
 
     """
-    # TODO: --output-delimiter (account for both : and ,)
-    # TODO: -m/--all/--findall to match multiple times? (like match -o)
-    # "Works like re.findall() in Python"
-    # TODO: match -o dict, match --json
+    # we cannot have both `parse PATTERN` and  `parse -e PATTERN -e PATTERN`
+    # because of click limitations on chained commands;
+    # we chose `-e` because we want to be able to try multiple patterns in a
+    # single invocation (repeating the command doesn't make sense with -o)
 
     patterns = [compile_pattern(p, fixed_strings, ignore_case, verbose) for p in regexp]
 

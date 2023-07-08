@@ -2,8 +2,7 @@
 After 1.0:
 
 * bugbear?
-* match -e pattern -e pattern (hard to do with click while keeping arg)
-* match-span -s ... -s ..s
+* match-span -s ... -s ..s (update: does this mean multiple starts?)
 * print last section without --failure if read-cmd exits with non-zero (how?)
 * option to turn off stderr dots for hidden sections
 * read-cmd time (and maybe for each section?)
@@ -11,5 +10,10 @@ After 1.0:
 * make dedupe_blank_lines optional
 * short command aliases (four-letter ones)
 * match/head/tail --repl spans of skipped lines with ... (match span already does this)
-* section -s pattern section --include pattern (tried it, not necessarily better)
 * a way to reuse pre-configured commands
+* split --only-delimited
+* split --output-format '{1}{2!r}'? requires a custom string.Formatter that coerces string arguments
+* parse -D/--output-delimiter (account for both : and ,)
+* parse --all/--findall to match multiple times? (like match -o); we need re.findall() for multiple patterns, though
+* parse --prefix-non-matching UNKNOWN -> `["UNKNOWN", line]` / `{"UNKNOWN": line}`
+* parse -e '(?P<type__blah>)' -> {"type": "blah"} (to know which pattern matched)
