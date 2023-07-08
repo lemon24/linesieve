@@ -1026,6 +1026,7 @@ def split(
     help="Use PATTERN as the pattern (can be used multiple times).",
 )
 @pattern_options
+@click.option('-o', '--only-matching', is_flag=True, help="Output only matching lines.")
 @click.option(
     '--json',
     is_flag=True,
@@ -1037,7 +1038,7 @@ def split(
     """,
 )
 @section_option
-def parse(regexp, fixed_strings, ignore_case, verbose, json):
+def parse(regexp, fixed_strings, ignore_case, verbose, only_matching, json):
     """Parse lines into structured data.
 
     If the -e PATTERN uses named groups,
@@ -1071,7 +1072,6 @@ def parse(regexp, fixed_strings, ignore_case, verbose, json):
 
     """
     # TODO: --output-delimiter (account for both : and ,)
-    # TODO: -o to hide non-matching lines? (like sub)
     # TODO: -m/--all/--findall to match multiple times? (like match -o)
     # "Works like re.findall() in Python"
     # TODO: match -o dict, match --json
@@ -1101,7 +1101,9 @@ def parse(regexp, fixed_strings, ignore_case, verbose, json):
                 return render_dict(groupdict)
             return render_list(match.groups() or [match.group()])
         else:
-            return line
+            if not only_matching:
+                return line
+            return None
 
     return processor
 

@@ -7,6 +7,7 @@ parse -s ^json-dict:$ --json -e '(?P<one>\d)(?P<two>\w)?'
 parse -s ^json-list:$ --json -e '(\d)(\w)?'
 parse -s ^json-no-groups:$ --json -e '\d\w?'
 parse -s ^patterns:$ -e '(?P<digit>\d)' -e '(?P<letter>[a-z])'
+parse -s ^only-matching:$ -e '(\d)(\w)' -o
 ---
 dict:
 .1a.
@@ -39,3 +40,6 @@ patterns:
 .1.
 .a.
 ...
+only-matching:
+1a
+aa

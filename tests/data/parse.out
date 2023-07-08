@@ -29,3 +29,5 @@ patterns:
 digit	1
 letter	a
 ...
+only-matching:
+1	a
