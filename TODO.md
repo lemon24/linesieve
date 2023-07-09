@@ -16,4 +16,3 @@ After 1.0:
 * parse -D/--output-delimiter (account for both : and ,)
 * parse --all/--findall to match multiple times? (like match -o); we need re.findall() for multiple patterns, though
 * parse --prefix-non-matching UNKNOWN -> `["UNKNOWN", line]` / `{"UNKNOWN": line}`
-* parse -e '(?P<type__blah>)' -> {"type": "blah"} (to know which pattern matched)

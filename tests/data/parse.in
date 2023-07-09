@@ -8,6 +8,11 @@ parse -s ^json-list:$ --json -e '(\d)(\w)?'
 parse -s ^json-no-groups:$ --json -e '\d\w?'
 parse -s ^patterns:$ -e '(?P<digit>\d)' -e '(?P<letter>[a-z])'
 parse -s ^only-matching:$ -e '(\d)(\w)' -o
+parse -s ^dunder:$ --json
+    -e '(?P<event__get>)got (?P<count>\d+) thing'
+    -e '(?P<event__send>)(?P<status__ok>sent)'
+    -e '(?P<event__send>)(?P<status__fail>could not send)'
+    -e 'number (?P<number__1>one)?(?P<number__2>two)?'
 ---
 dict:
 .1a.
@@ -43,3 +48,10 @@ patterns:
 only-matching:
 1a
 aa
+dunder:
+got 10 things
+sent the things
+could not send the things
+number one
+number two
+number three

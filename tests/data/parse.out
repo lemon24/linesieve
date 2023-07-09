@@ -31,3 +31,10 @@ letter	a
 ...
 only-matching:
 1	a
+dunder:
+{"event": "get", "count": "10"}
+{"event": "send", "status": "ok"}
+{"event": "send", "status": "fail"}
+{"number": "1"}
+{"number": "2"}
+{"number": null}

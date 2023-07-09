@@ -1001,6 +1001,28 @@ def parse(patterns, fixed_strings, ignore_case, verbose, only_matching, json):
         $ echo +1a+ | linesieve parse --json -e '(\\d)(\\w)'
         ["1", "a"]
 
+    For matching groups with names of the form `<name>__<new_value>`,
+    `name` is used as name and `new_value` as value,
+    ignoring the actual group value.
+    This can be used to tell which of multiple -e patterns matched,
+    or to assign symbolic values to groups:
+
+    \b
+        $ linesieve parse \\
+        > -e '(?P<event__get>)got (?P<count>\\d+) thing' \\
+        > -e '(?x) (?P<event__send>) (
+        >   (?P<status__ok>sent) |
+        >   (?P<status__fail>could \\s+ not \\s+ send)
+        > )' \\
+        > --json << EOF
+        got 10 things
+        sent the things
+        could not send the things
+        EOF
+        {"event": "get", "count": "10"}
+        {"event": "send", "status": "ok"}
+        {"event": "send", "status": "fail"}
+
     """
     # we cannot have both `parse PATTERN` and  `parse -e PATTERN -e PATTERN`
     # because of click limitations on chained commands;
@@ -1021,12 +1043,16 @@ def parse(patterns, fixed_strings, ignore_case, verbose, only_matching, json):
 
         render_dict = render_list = json_dumps
 
+    has_dunder = {p: any('__' in k for k in p.groupindex) for p in patterns}
+
     def processor(line):
         for pattern in patterns:
             match = pattern.search(line)
             if not match:
                 continue
             if groupdict := match.groupdict():
+                if has_dunder[pattern]:
+                    groupdict = rewrite_dunders(groupdict)
                 return render_dict(groupdict)
             return render_list(match.groups() or [match.group()])
         else:
@@ -1035,6 +1061,20 @@ def parse(patterns, fixed_strings, ignore_case, verbose, only_matching, json):
             return None
 
     return processor
+
+
+def rewrite_dunders(groupdict):
+    rv = {}
+    for key, value in groupdict.items():
+        if '__' in key:
+            key, _, maybe_value = key.partition('__')
+            # first key has priority
+            if rv.get(key) is not None:
+                continue
+            if value is not None:
+                value = maybe_value
+        rv[key] = value
+    return rv
 
 
 @cli.command(short_help="Replace pattern.")
